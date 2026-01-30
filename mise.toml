@@ -1,0 +1,25 @@
+[tools]
+python = "3.12"
+uv = "latest"
+pnpm = "latest"
+node = "lts"
+
+[tasks]
+# Backend Tasks
+"backend:dev" = { run = "uv run fastapi dev app/main.py", dir = "backend", description = "Start backend dev server" }
+"backend:lint" = { run = "uv run ruff check .", dir = "backend", description = "Lint backend code" }
+"backend:format" = { run = "uv run ruff format .", dir = "backend", description = "Format backend code" }
+"backend:test" = { run = "uv run python -m pytest", dir = "backend", description = "Run backend tests" }
+
+# Frontend Tasks
+"frontend:dev" = { run = "pnpm dev", dir = "frontend", description = "Start frontend dev server" }
+"frontend:lint" = { run = "pnpm lint", dir = "frontend", description = "Lint frontend code" }
+"frontend:format" = { run = "pnpm prettier --write .", dir = "frontend", description = "Format frontend code" }
+"frontend:build" = { run = "pnpm build", dir = "frontend", description = "Build frontend" }
+"frontend:test" = { run = "pnpm test", dir = "frontend", description = "Run frontend unit tests" }
+"frontend:test:e2e" = { run = "pnpm test:e2e", dir = "frontend", description = "Run frontend E2E tests" }
+"frontend:install" = { run = "pnpm install", dir = "frontend", description = "Install frontend dependencies" }
+
+# Composite Tasks
+"dev" = { depends = ["backend:dev", "frontend:dev"], description = "Start both servers" }
+"install" = { depends = ["frontend:install"], description = "Install all dependencies" }
