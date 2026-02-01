@@ -10,6 +10,8 @@ from app.services.research import ResearchAgent
 @pytest.mark.asyncio
 async def test_research_flow():
     # Mock dependencies
+    from unittest.mock import MagicMock
+
     with (
         patch("app.services.research.DuckDuckGoSearchTool") as MockSearch,
         patch("app.services.research.get_llm") as mock_get_llm,
@@ -21,47 +23,28 @@ async def test_research_flow():
         mock_result_item = type("obj", (object,), {"url": "http://example.com", "description": "desc"})
         mock_tool_instance.run = AsyncMock(return_value=type("obj", (object,), {"results": [mock_result_item]})())
 
-        # Setup Mock LLM
+        # Setup Mock LLM - Use MagicMock for proper attribute access
         mock_llm_instance = mock_get_llm.return_value
-        mock_llm_instance.generate = AsyncMock(
-            return_value=type(
-                "obj",
-                (object,),
-                {
-                    "state": type(
-                        "obj",
-                        (object,),
-                        {
-                            "message": AssistantMessage(
-                                content="""
-                ```json
-                {
-                    "topic": "Test Topic",
-                    "slides": [
-                        {
-                            "layout_index": 0,
-                            "title": "Test Title",
-                            "bullet_points": ["Point 1", "Point 2"],
-                            "image_caption": null
-                        }
-                    ]
-                }
-                ```
-                """
-                            )
-                        },
-                    )()
-                },
-            )()
-        )
+        mock_response = MagicMock()
+        mock_response.state.message.content = """
+```json
+{
+    "topic": "Test Topic",
+    "slides": [
+        {
+            "layout_index": 0,
+            "title": "Test Title",
+            "bullet_points": ["Point 1", "Point 2"],
+            "image_caption": null
+        }
+    ]
+}
+```
+"""
+        mock_llm_instance.run = AsyncMock(return_value=mock_response)
 
         # Setup Mock Converter
-        # Reviewer Note: mock_converter_instance was removed as it was unused (F841)
-        MockConverter.return_value.convert = AsyncMock()  # Can be plain mock if run_in_executor mocks
-
-        # Since we use run_in_executor, we might need to mock that or the converter call inside it
-        # Easier: Mock _fetch_content method of the agent?
-        # Or just trust the mock converter if we control it.
+        MockConverter.return_value.convert = AsyncMock()
 
         agent = ResearchAgent()
 
@@ -76,7 +59,7 @@ async def test_research_flow():
 
         mock_tool_instance.run.assert_called_once()
         agent._fetch_content.assert_called_once_with("http://example.com")
-        mock_llm_instance.generate.assert_called_once()
+        mock_llm_instance.run.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -112,7 +95,7 @@ async def test_research_fetch_failure():
 
         # Mock LLM (Needs to be valid to test synthesis fallback)
         mock_llm_instance = mock_get_llm.return_value
-        mock_llm_instance.generate = AsyncMock(
+        mock_llm_instance.run = AsyncMock(
             return_value=type(
                 "obj",
                 (object,),
@@ -136,7 +119,7 @@ async def test_research_fetch_failure():
 
         # Verify LLM called with snippets since fetch failed
         # We can inspect the prompt arg to see if it contains "Snippet"
-        call_args = mock_llm_instance.generate.call_args
+        call_args = mock_llm_instance.run.call_args
         assert call_args
         # call_args[0][0] is the list of messages. [0] is UserMessage. content is the prompt.
         prompt_content = call_args[0][0][0].content
@@ -158,7 +141,7 @@ async def test_research_malformed_response():
 
         mock_llm_instance = mock_get_llm.return_value
         # Return invalid JSON
-        mock_llm_instance.generate = AsyncMock(
+        mock_llm_instance.run = AsyncMock(
             return_value=type(
                 "obj", (object,), {"state": type("obj", (object,), {"message": AssistantMessage(content="NOT JSON")})()}
             )()
@@ -190,7 +173,7 @@ async def test_research_without_docling():
         )
 
         mock_llm_instance = mock_get_llm.return_value
-        mock_llm_instance.generate = AsyncMock(
+        mock_llm_instance.run = AsyncMock(
             return_value=type(
                 "obj",
                 (object,),
@@ -219,7 +202,7 @@ async def test_research_without_docling():
 
         # Ensure research runs without crashing and uses snippets (implicit in logic)
         await agent.research("Test")
-        mock_llm_instance.generate.assert_called()
+        mock_llm_instance.run.assert_called()
 
 
 @pytest.mark.asyncio
@@ -240,7 +223,7 @@ async def test_research_llm_returns_list():
         # Mocking a list response
         mock_content_item = type("obj", (object,), {"text": '{"topic": "T", "slides": []}'})
 
-        mock_llm_instance.generate = AsyncMock(
+        mock_llm_instance.run = AsyncMock(
             return_value=type(
                 "obj",
                 (object,),
@@ -265,7 +248,7 @@ async def test_research_empty_search_results():
         mock_tool.run = AsyncMock(return_value=type("obj", (object,), {"results": []})())
 
         mock_llm = mock_get_llm.return_value
-        mock_llm.generate = AsyncMock(
+        mock_llm.run = AsyncMock(
             return_value=type(
                 "obj",
                 (object,),
@@ -281,7 +264,7 @@ async def test_research_empty_search_results():
         await agent.research("Test")
 
         # Verify LLM called even with empty results
-        mock_llm.generate.assert_called()
+        mock_llm.run.assert_called()
 
 
 @pytest.mark.asyncio
@@ -324,44 +307,30 @@ async def test_research_fetch_content_success():
 @pytest.mark.asyncio
 async def test_research_generic_markdown_block():
     """Test LLM response with generic markdown block"""
+    from unittest.mock import MagicMock
+
     with (
         patch("app.services.research.DuckDuckGoSearchTool") as MockSearch,
         patch("app.services.research.get_llm") as mock_get_llm,
     ):
-        # KEY FIX: Mock the search tool run method as AsyncMock
+        # Mock the search tool run method as AsyncMock
         mock_tool = MockSearch.return_value
         mock_tool.run = AsyncMock(return_value=type("obj", (object,), {"results": []})())
 
+        # Use MagicMock for proper attribute access
         mock_llm_instance = mock_get_llm.return_value
-        mock_llm_instance.generate = AsyncMock(
-            return_value=type(
-                "obj",
-                (object,),
-                {
-                    "state": type(
-                        "obj",
-                        (object,),
-                        {
-                            "message": AssistantMessage(
-                                content="""
-                ```
-                { "topic": "T", "slides": [] }
-                ```
-                """
-                            )
-                        },
-                    )()
-                },
-            )()
-        )
+        mock_response = MagicMock()
+        mock_response.state.message.content = """
+```
+{ "topic": "T", "slides": [] }
+```
+"""
+        mock_llm_instance.run = AsyncMock(return_value=mock_response)
 
         agent = ResearchAgent()
         slides = await agent.research("Test")
         # Should parse correctly despite generic code block
-        assert len(slides) == 0  # Or check content if I put slides in it
-
-        # Should parse correctly despite generic code block
-        assert len(slides) == 0  # Or check content if I put slides in it
+        assert len(slides) == 0
 
 
 def test_select_layout_logic():

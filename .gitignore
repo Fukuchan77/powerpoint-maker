@@ -1,0 +1,35 @@
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE/Editor =====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ===== Cache =====
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.eslintcache
+.cache/
+*.tsbuildinfo
+
+# ===== Coverage/Reports =====
+coverage/
+htmlcov/
+.coverage
+coverage.json
+*.lcov
+
+# ===== Build outputs =====
+dist/
+build/

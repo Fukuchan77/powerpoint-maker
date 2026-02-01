@@ -1,0 +1,14 @@
+# Build outputs
+html/
+dist/
+build/
+
+# Coverage reports
+coverage/
+
+# Dependencies
+node_modules/
+
+# Generated files
+*.min.js
+*.min.css

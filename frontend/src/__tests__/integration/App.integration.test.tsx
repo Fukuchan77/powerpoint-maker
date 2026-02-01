@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import userEvent from "@testing-library/user-event";
 import type { AxiosResponse } from "axios";
 import axios from "axios";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "../../App";
-import type { TemplateAnalysisResult, SlideContent } from "../../types";
+import type { SlideContent, TemplateAnalysisResult } from "../../types";
 
 // Mock axios
 vi.mock("axios");
@@ -25,11 +25,14 @@ describe("App Integration", () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
 
-    // 1. Check initial state
+    // 1. Check initial state - wait for lazy-loaded components
     expect(screen.getByText(/AI PowerPoint Agent/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/1. Upload PowerPoint Template/i),
-    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/1. Upload PowerPoint Template/i),
+      ).toBeInTheDocument();
+    });
 
     // Topic input should not be visible yet
     expect(screen.queryByText(/2. Define Topic/i)).not.toBeInTheDocument();
@@ -56,14 +59,16 @@ describe("App Integration", () => {
       await user.upload(fileInputRetry as HTMLElement, file);
     }
 
-    // Wait for analysis to complete and Topic Input to appear
+    // Wait for analysis to complete and Topic Input to appear (lazy loaded)
     await waitFor(() => {
       expect(
         screen.getByText(/Template Loaded: template.pptx/i),
       ).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/2. Define Topic/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/2. Define Topic/i)).toBeInTheDocument();
+    });
 
     // 3. Enter Topic and Research
     const topicInput = screen.getByPlaceholderText(/e.g., The Future of AI/i);
@@ -121,6 +126,11 @@ describe("App Integration", () => {
   it("displays error when analysis fails", async () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
+
+    // Wait for lazy-loaded components first
+    await waitFor(() => {
+      expect(container.querySelector('input[type="file"]')).toBeInTheDocument();
+    });
 
     const fileInput = container.querySelector('input[type="file"]');
     const file = new File([""], "bad.pptx", { type: "application/pdf" }); // Type doesn't matter for mock

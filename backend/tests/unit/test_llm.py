@@ -31,10 +31,12 @@ def test_get_llm_openai():
 
 
 def test_get_llm_invalid_provider():
+    from app.core.llm import LLMError
+
     with patch.dict(os.environ, {"LLM_PROVIDER": "unknown"}, clear=True):
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(LLMError) as exc:
             get_llm()
-        assert "Unsupported LLM_PROVIDER" in str(exc.value)
+        assert "Failed to initialize LLM" in str(exc.value)
 
 
 def test_get_llm_provider_case_insensitive():

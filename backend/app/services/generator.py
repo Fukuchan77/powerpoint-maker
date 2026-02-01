@@ -156,16 +156,25 @@ class SlidePopulator:
         tf = placeholder.text_frame
         tf.clear()
 
+        print(f"[Populator] populate_bullets called with {len(bullets) if bullets else 0} items")
+        print(f"[Populator] bullets type: {type(bullets)}")
+        if bullets:
+            print(f"[Populator] First item type: {type(bullets[0])}")
+            print(f"[Populator] First item: {bullets[0]}")
+
         for item in bullets:
             p = tf.add_paragraph()
 
             if isinstance(item, str):
                 text = item
                 level = 0
+                print(f"[Populator] Processing string: {text}")
             elif hasattr(item, "text"):  # BulletPoint object
                 text = item.text
                 level = item.level
+                print(f"[Populator] Processing BulletPoint: {text} (level {level})")
             else:
+                print(f"[Populator] Skipping unknown item type: {type(item)}")
                 continue
 
             p.text = text
@@ -237,14 +246,15 @@ class PresentationGenerator:
             raise FileNotFoundError(f"Template not found: {template_path}")
 
         prs = Presentation(template_path)
-
-        # Clear existing slides
-        xml_slides = prs.slides._sldIdLst
-        slides_len = len(xml_slides)
-        for i in range(slides_len - 1, -1, -1):
-            del xml_slides[i]
-
         master = prs.slide_masters[0]  # Default to first master
+
+        # Clear ALL existing slides first
+        print(f"[Generator] Template has {len(prs.slides)} existing slides")
+        while len(prs.slides) > 0:
+            rId = prs.slides._sldIdLst[0].rId
+            prs.part.drop_rel(rId)
+            del prs.slides._sldIdLst[0]
+        print(f"[Generator] Cleared all slides. Now have {len(prs.slides)} slides")
 
         for slide_content in slides:
             # Layout selection

@@ -1,15 +1,10 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
-import pytest
 from pptx.enum.shapes import PP_PLACEHOLDER
 
 from app.services.template import LayoutRegistry, TemplateAnalyzer
 
-
-@pytest.fixture
-def mock_presentation_class():
-    with patch("app.services.template.Presentation") as MockPres:
-        yield MockPres
+# Note: mock_presentation_class fixture is provided by conftest.py
 
 
 def test_analyze_template_structure(mock_presentation_class):

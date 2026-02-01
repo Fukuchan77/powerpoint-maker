@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PlaceholderInfo(BaseModel):
@@ -50,14 +50,17 @@ class ChartData(BaseModel):
 
 
 class SlideContent(BaseModel):
-    layout_index: int
-    title: str
-    bullet_points: List[str] = []
-    bullets: Optional[List[BulletPoint]] = None
-    image_url: Optional[str] = None
-    image_caption: Optional[str] = None
-    chart: Optional[ChartData] = None  # Added chart field
-    theme_color: Optional[str] = None  # e.g. "ACCENT_1"
+    layout_index: int = Field(..., description="Index of the layout to use from the template")
+    title: str = Field(..., description="Title of the slide")
+    bullet_points: List[str] = Field(default=[], description="Simple bullet points as flat list of strings")
+    bullets: Optional[List[BulletPoint]] = Field(
+        default=None,
+        description="Structured bullet points with hierarchy (level support). Alternative to bullet_points.",
+    )
+    image_url: Optional[str] = Field(default=None, description="URL for slide image")
+    image_caption: Optional[str] = Field(default=None, description="Caption for the slide image")
+    chart: Optional[ChartData] = Field(default=None, description="Chart data for visualization")
+    theme_color: Optional[str] = Field(default=None, description="Theme color name (e.g., 'ACCENT_1')")
 
 
 class PresentationPlan(BaseModel):

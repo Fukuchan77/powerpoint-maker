@@ -1,4 +1,4 @@
-# Logs
+# ===== Logs =====
 logs
 *.log
 npm-debug.log*
@@ -7,23 +7,32 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# ===== Dependencies =====
+node_modules/
+
+# ===== Build/SSR =====
+dist-ssr/
 *.local
 
-# Editor directories and files
+# ===== Editor (VS Code specific) =====
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+
+# ===== Windows/Visual Studio =====
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
 
-# Test coverage and reports
-coverage/
+# ===== Test reports =====
 playwright-report/
 test-results/
+
+# ===== Vitest coverage output =====
+html/
+
+# ===== Cache =====
+.vite/
+
+# ===== Package =====
+*.tgz

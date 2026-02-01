@@ -9,16 +9,7 @@ from app.main import app
 client = TestClient(app)
 
 
-@pytest.fixture
-def sample_pptx():
-    from pptx import Presentation
-
-    filename = "test_integration_template.pptx"
-    prs = Presentation()
-    prs.save(filename)
-    yield filename
-    if os.path.exists(filename):
-        os.remove(filename)
+# Note: sample_pptx fixture is provided by conftest.py
 
 
 def test_health_check():
@@ -40,7 +31,6 @@ def test_analyze_template_endpoint(sample_pptx):
     assert data["filename"] in [sample_pptx, os.path.basename(sample_pptx)]
     assert "masters" in data
     assert "template_id" in data
-    return data["template_id"]
 
 
 @pytest.mark.asyncio
@@ -88,8 +78,8 @@ async def test_research_with_template_id():
         with patch("app.api.routes.layout_registry.get_or_analyze") as mock_registry:
             mock_registry.return_value = mock_result
 
-            # Patch file existence check because logic checks IF file exists
-            with patch("pathlib.Path.exists", return_value=True):
+            # Patch find_template_by_id to return a path
+            with patch("app.api.routes.find_template_by_id", return_value="/fake/path/template.pptx"):
                 response = client.post("/api/research", params={"topic": topic, "template_id": template_id})
 
             assert response.status_code == 200
@@ -174,31 +164,21 @@ def test_generate_with_filename_fallback(sample_pptx):
     )
 
 
-def test_analyze_template_save_error():
-    """Test error handling during file save"""
-    # We patch shutil.copyfileobj to raise an exception
-    with patch("shutil.copyfileobj", side_effect=Exception("Disk full")):
-        with open("test_integration_template.pptx", "wb") as f:
-            f.write(b"dummy pptx")
-
-        with open("test_integration_template.pptx", "rb") as f:
-            response = client.post(
-                "/api/analyze-template",
-                files={
-                    "file": (
-                        "test.pptx",
-                        f,
-                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    )
-                },
+def test_analyze_template_empty_file():
+    """Test error handling for empty file"""
+    response = client.post(
+        "/api/analyze-template",
+        files={
+            "file": (
+                "test.pptx",
+                b"",  # Empty file
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
             )
+        },
+    )
 
-        assert response.status_code == 500
-        assert "Failed to save file" in response.json()["detail"]
-
-        # Cleanup
-        if os.path.exists("test_integration_template.pptx"):
-            os.remove("test_integration_template.pptx")
+    assert response.status_code == 400
+    assert "Empty file" in response.json()["detail"]
 
 
 def test_analyze_template_analysis_error(sample_pptx):
@@ -218,4 +198,4 @@ def test_analyze_template_analysis_error(sample_pptx):
             )
 
     assert response.status_code == 500
-    assert "Analysis failed" in response.json()["detail"]
+    assert "Failed to analyze template structure" in response.json()["detail"]

@@ -93,7 +93,7 @@ async def test_research_agent_parses_chart_data():
 
     mock_response = MagicMock()
     mock_response.state.message.content = f"```json\n{mock_json}\n```"
-    agent.llm.generate.return_value = mock_response
+    agent.llm.run.return_value = mock_response
 
     # Mock dependencies to avoid side effects
     with patch.object(agent, "enrich_slides_with_images", new_callable=AsyncMock):

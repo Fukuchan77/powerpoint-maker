@@ -10,24 +10,10 @@ from pptx.enum.shapes import PP_PLACEHOLDER
 from app.schemas import SlideContent
 from app.services.generator import PresentationGenerator, SlidePopulator
 
-
-@pytest.fixture
-def sample_template():
-    filename = "test_template_gen.pptx"
-    prs = Presentation()
-    # Add a blank slide layout (index 0 usually title, 1 title+content)
-    # python-pptx default template has layouts.
-    # We need to ensure we have layouts.
-    # New Presentation() uses a default template which has layouts.
-    prs.save(filename)
-    yield filename
-    if os.path.exists(filename):
-        os.remove(filename)
-    if os.path.exists("output_gen.pptx"):
-        os.remove("output_gen.pptx")
+# Note: sample_pptx fixture is provided by conftest.py
 
 
-def test_generate_presentation(sample_template):
+def test_generate_presentation(sample_pptx, tmp_path):
     generator = PresentationGenerator()
 
     slides = [
@@ -39,8 +25,8 @@ def test_generate_presentation(sample_template):
         SlideContent(layout_index=1, title="Slide 2", bullet_points=["Point C"]),
     ]
 
-    output = "output_gen.pptx"
-    generated_path = generator.generate(sample_template, slides, output)
+    output = str(tmp_path / "output_gen.pptx")
+    generated_path = generator.generate(sample_pptx, slides, output)
 
     assert os.path.exists(generated_path)
 
@@ -57,12 +43,12 @@ def test_generate_invalid_template_path():
 
 
 @patch("builtins.print")
-def test_generate_invalid_layout_index(mock_print, sample_template):
+def test_generate_invalid_layout_index(mock_print, sample_pptx, tmp_path):
     generator = PresentationGenerator()
     slides = [SlideContent(layout_index=99, title="T", bullet_points=[])]
 
-    out = "out_warn.pptx"
-    generator.generate(sample_template, slides, out)
+    out = str(tmp_path / "out_warn.pptx")
+    generator.generate(sample_pptx, slides, out)
 
     # Check that it printed a warning
     args, _ = mock_print.call_args
@@ -70,32 +56,25 @@ def test_generate_invalid_layout_index(mock_print, sample_template):
 
     # Check correct completion (file exists, but maybe empty content for that slide)
     assert os.path.exists(out)
-    if os.path.exists(out):
-        os.remove(out)
 
 
 @pytest.mark.parametrize("status_code", [404, 500])
-def test_generate_image_failure(sample_template, status_code):
+def test_generate_image_failure(sample_pptx, tmp_path, status_code):
     generator = PresentationGenerator()
     slides = [SlideContent(layout_index=1, title="Img", bullet_points=[], image_url="http://fail.com/img.png")]
 
     # We need to ensure logic doesn't crash.
     # We can mock requests.get
-    from unittest.mock import Mock, patch
-
     with patch("requests.get") as mock_get:
         mock_get.return_value = Mock(status_code=status_code)
 
-        out = "out_img_fail.pptx"
-        generator.generate(sample_template, slides, out)
+        out = str(tmp_path / "out_img_fail.pptx")
+        generator.generate(sample_pptx, slides, out)
 
         assert os.path.exists(out)
         prs = Presentation(out)
         # Check that slide was created (even if image failed)
         assert len(prs.slides) == 1
-
-    if os.path.exists(out):
-        os.remove(out)
 
 
 # --- SlidePopulator Tests ---
@@ -454,3 +433,236 @@ def test_japanese_font_support():
     populator.populate_bullets(ph, ["日本語の弾丸"])
 
     assert run_bull.font.name == "Meiryo UI"
+
+
+def test_set_japanese_font_error_handling():
+    """Test error handling when setting Japanese font fails"""
+    slide = Mock()
+    populator = SlidePopulator(slide)
+
+    # Create a run that raises an exception when accessing _r
+    run = Mock()
+    run._r.get_or_add_rPr.side_effect = Exception("XML manipulation failed")
+
+    # Should not crash, but add error to errors list
+    populator.set_japanese_font(run)
+
+    assert len(populator.errors) > 0
+    assert "Failed to set Japanese font" in populator.errors[0]
+
+
+def test_replace_text_preserve_format_japanese_no_runs():
+    """Test Japanese text replacement when paragraph has no runs"""
+    mock_p = Mock()
+    mock_p.runs = []
+    mock_run = Mock()
+    mock_p.add_run.return_value = mock_run
+
+    populator = SlidePopulator(None)
+    populator.replace_text_preserve_format(mock_p, "日本語")
+
+    mock_p.add_run.assert_called_once()
+    assert mock_run.text == "日本語"
+    # Should have attempted to set Japanese font
+    assert mock_run.font.name == "Meiryo UI"
+
+
+def test_set_theme_color_invalid_color():
+    """Test theme color setting with invalid color name"""
+    slide = Mock()
+    populator = SlidePopulator(slide)
+
+    run = Mock()
+    # Test with non-existent color name - should use ACCENT_1 as fallback
+    populator.set_theme_color(run, "INVALID_COLOR_NAME")
+
+    # Should not crash and should have set some color
+    assert run.font.color.theme_color is not None
+
+
+def test_set_theme_color_error_handling():
+    """Test error handling when setting theme color fails"""
+    slide = Mock()
+    populator = SlidePopulator(slide)
+
+    run = Mock()
+    # Make the entire font.color access raise an exception
+    type(run.font).color = property(lambda self: (_ for _ in ()).throw(Exception("Color setting failed")))
+
+    # Should catch exception and add to errors
+    populator.set_theme_color(run, "ACCENT_1")
+
+    assert len(populator.errors) > 0
+    assert "Failed to set theme color" in populator.errors[0]
+
+
+def test_populate_bullets_unknown_item_type():
+    """Test populate_bullets with unknown item type (not string or BulletPoint)"""
+    mock_ph = Mock()
+    mock_tf = Mock()
+    mock_ph.text_frame = mock_tf
+
+    # Create an unknown type (e.g., a number)
+    bullets = [123, {"invalid": "dict"}]
+
+    populator = SlidePopulator(None)
+    populator.populate_bullets(mock_ph, bullets, theme_color=None)
+
+    # Should clear and not crash
+    assert mock_tf.clear.called
+    # Paragraphs are added but text is not set for unknown types (they are skipped)
+    # The code still calls add_paragraph but doesn't set text on unknown types
+    assert mock_tf.add_paragraph.call_count == 2
+
+
+def test_insert_chart_title_error():
+    """Test chart insertion when setting title fails"""
+    slide_mock = Mock()
+    populator = SlidePopulator(slide_mock)
+
+    placeholder = Mock()
+    chart_obj = Mock()
+    # Make chart title setting raise an exception
+    chart_obj.chart.chart_title.text_frame.text = Mock(side_effect=Exception("Title not supported"))
+    placeholder.insert_chart.return_value = chart_obj
+
+    from app.schemas import ChartData, ChartSeries
+
+    chart_data = ChartData(
+        title="Test Chart",
+        categories=["A", "B"],
+        series=[ChartSeries(name="Series 1", values=[1.0, 2.0])],
+        type="PIE",
+    )
+
+    # Should not crash even if title setting fails
+    populator.insert_chart(placeholder, chart_data)
+
+    # Chart should still be inserted
+    placeholder.insert_chart.assert_called_once()
+
+
+def test_insert_chart_complete_failure():
+    """Test chart insertion when entire operation fails"""
+    slide_mock = Mock()
+    populator = SlidePopulator(slide_mock)
+
+    placeholder = Mock()
+    placeholder.insert_chart.side_effect = Exception("Chart insertion failed")
+
+    from app.schemas import ChartData, ChartSeries
+
+    chart_data = ChartData(
+        title="Test Chart",
+        categories=["A"],
+        series=[ChartSeries(name="S1", values=[1.0])],
+        type="COLUMN_CLUSTERED",
+    )
+
+    populator.insert_chart(placeholder, chart_data)
+
+    assert len(populator.errors) > 0
+    assert "Failed to insert chart" in populator.errors[0]
+
+
+@patch("builtins.print")
+def test_generate_invalid_image_url(mock_print, sample_pptx, tmp_path):
+    """Test generation with invalid image URL (not http/https)"""
+    generator = PresentationGenerator()
+    slides = [
+        SlideContent(
+            layout_index=1,
+            title="Invalid Image",
+            bullet_points=[],
+            image_url="ftp://invalid.com/image.png",  # Invalid protocol
+        )
+    ]
+
+    out = str(tmp_path / "out_invalid_url.pptx")
+    generator.generate(sample_pptx, slides, out)
+
+    # Should complete without crashing
+    assert os.path.exists(out)
+
+    # Should have printed warning about invalid URL
+    print_calls = [str(call) for call in mock_print.call_args_list]
+    assert any("Invalid image URL" in call for call in print_calls)
+
+
+@patch("builtins.print")
+@patch("requests.get")
+def test_generate_image_fetch_exception(mock_get, mock_print, sample_pptx, tmp_path):
+    """Test generation when image fetch raises exception"""
+    mock_get.side_effect = Exception("Connection timeout")
+
+    generator = PresentationGenerator()
+    slides = [
+        SlideContent(
+            layout_index=1,
+            title="Image Fetch Error",
+            bullet_points=[],
+            image_url="http://example.com/image.png",
+        )
+    ]
+
+    out = str(tmp_path / "out_fetch_error.pptx")
+    generator.generate(sample_pptx, slides, out)
+
+    # Should complete without crashing
+    assert os.path.exists(out)
+
+    # Should have printed error message
+    print_calls = [str(call) for call in mock_print.call_args_list]
+    assert any("Failed to fetch/insert image" in call for call in print_calls)
+
+
+@patch("builtins.print")
+def test_generate_chart_no_placeholder(mock_print, sample_pptx, tmp_path):
+    """Test generation when no suitable chart placeholder is found"""
+    from app.schemas import ChartData, ChartSeries
+
+    generator = PresentationGenerator()
+    slides = [
+        SlideContent(
+            layout_index=0,  # Layout with no chart placeholder
+            title="Chart Slide",
+            bullet_points=[],
+            chart=ChartData(
+                title="Test Chart",
+                categories=["X", "Y"],
+                series=[ChartSeries(name="S1", values=[10.0, 20.0])],
+                type="COLUMN_CLUSTERED",
+            ),
+        )
+    ]
+
+    out = str(tmp_path / "out_no_chart_ph.pptx")
+    generator.generate(sample_pptx, slides, out)
+
+    # Should complete without crashing
+    assert os.path.exists(out)
+
+    # Should have printed warning
+    print_calls = [str(call) for call in mock_print.call_args_list]
+    assert any("No suitable placeholder found for chart" in call for call in print_calls)
+
+
+def test_validate_content_type():
+    """Test content type validation for placeholders"""
+    slide = Mock()
+    populator = SlidePopulator(slide)
+
+    # Test with None placeholder
+    assert populator.validate_content_type(None, "text") is False
+
+    # Test with valid text placeholder
+    ph = Mock()
+    ph.placeholder_format.type = PP_PLACEHOLDER.BODY
+    assert populator.validate_content_type(ph, "text") is True
+
+    # Test with invalid combination
+    ph.placeholder_format.type = PP_PLACEHOLDER.PICTURE
+    assert populator.validate_content_type(ph, "text") is False
+
+    # Test with image placeholder
+    assert populator.validate_content_type(ph, "image") is True

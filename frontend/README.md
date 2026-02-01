@@ -36,11 +36,13 @@ This is the React-based frontend for the PowerPoint Maker application.
 We use **Vitest** for unit testing and **Playwright** for E2E testing.
 
 ### Running Unit Tests
+
 ```bash
 pnpm test
 ```
 
 ### Running E2E Tests
+
 ```bash
 pnpm test:e2e
 ```
