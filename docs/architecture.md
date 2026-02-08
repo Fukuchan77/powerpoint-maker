@@ -85,7 +85,10 @@ backend/app/
 ├── services/              # Service Layer
 │   ├── generator.py       # PPTX generation logic
 │   ├── research.py        # Research agent
-│   └── template.py        # Template analysis
+│   ├── template.py        # Template analysis
+│   ├── layout_intelligence.py  # AI-powered layout selection
+│   ├── layout_catalog.py  # Layout type definitions
+│   └── layout_mapper.py   # Layout type to template mapping
 ├── core/                  # Core Layer
 │   ├── llm.py            # LLM integration
 │   └── logging.py        # Logging configuration
@@ -148,6 +151,54 @@ User → Click "Download" → POST /api/generate
                     Browser downloads file
 ```
 
+### 4. Layout Intelligence Flow (Text Input)
+
+```
+User → Enter raw text → POST /api/layout-intelligence
+                             ↓
+                     InputValidator (security checks)
+                             ↓
+                     LayoutIntelligenceService
+                             ↓
+                     LLM structures content
+                             ↓
+                     OverflowValidator checks capacity
+                             ↓
+                     LayoutTypeMapper resolves layouts
+                             ↓
+                     Return SlideContent[]
+                             ↓
+                     Frontend displays preview
+```
+
+**Layout Intelligence Pipeline**:
+
+1. **Input Validation**: Check text length, detect suspicious patterns (prompt injection defense)
+2. **Content Structuring**: LLM analyzes text and creates presentation structure with layout selection
+3. **Overflow Detection**: Validate content fits within layout capacity constraints
+4. **Overflow Resolution**: Apply strategies (layout change → page split → summarization)
+5. **Layout Mapping**: Map abstract layout types (1-7) to actual template layouts
+6. **Fallback Handling**: Use alternative layouts when preferred layout unavailable
+
+**Layout Type Catalog** (Abstract Types 1-7):
+
+| ID | Name | Description | Capacity |
+|----|------|-------------|----------|
+| 1 | Title Slide | Opening slide with title and subtitle | 200 chars |
+| 2 | Title + Bullets | Standard content slide | 800 chars |
+| 3 | Section Header | Section divider | 150 chars |
+| 4 | Two-Column | Comparison or balanced content | 1200 chars |
+| 5 | Quote/Highlight | Emphasis slide | 400 chars |
+| 6 | Bullets Only | Content without title | 900 chars |
+| 7 | Summary | Closing slide | 600 chars |
+
+**Timeout Management**:
+
+- Pipeline timeout: 60 seconds (configurable)
+- Individual LLM call timeout: 30 seconds (configurable)
+- Budget-aware retry logic: Max 3 attempts, skipped if <15s remaining
+- Frontend timeout: 65 seconds (allows backend to timeout first)
+
 ## 📋 API Schemas
 
 ### SlideContent Schema
@@ -199,6 +250,7 @@ User → Click "Download" → POST /api/generate
    - Endpoint-specific limits:
      - `/api/analyze-template`: 10 requests/minute
      - `/api/research`: 10 requests/minute
+     - `/api/layout-intelligence`: 10 requests/minute
      - `/api/generate`: 5 requests/minute
    - DDoS attack prevention
    - Per-client IP address tracking

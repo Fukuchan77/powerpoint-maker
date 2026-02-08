@@ -13,6 +13,28 @@ from pptx import Presentation
 from pptx.enum.shapes import PP_PLACEHOLDER
 
 # =============================================================================
+# Rate Limiter Reset Fixture
+# =============================================================================
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """
+    Reset rate limiter between tests to prevent rate limit errors.
+
+    This fixture runs automatically before each test to clear the rate limiter's
+    internal state, ensuring tests don't interfere with each other.
+    """
+    from app.middleware.rate_limit import limiter
+
+    # Reset the limiter's storage before each test
+    limiter.reset()
+    yield
+    # Clean up after test
+    limiter.reset()
+
+
+# =============================================================================
 # File-Based Fixtures
 # =============================================================================
 

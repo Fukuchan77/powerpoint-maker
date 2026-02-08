@@ -4,9 +4,7 @@ Tests Settings validation, environment variable handling, and path configuration
 Target coverage: 100%
 """
 
-import os
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
@@ -20,13 +18,15 @@ class TestSettings:
     def test_default_settings(self):
         """Test default settings initialization."""
         settings = Settings()
-        
+
         assert settings.host == "0.0.0.0"
         assert settings.port == 8000
         assert settings.debug is False
         assert settings.cors_origins == ["http://localhost:5173", "http://localhost:3000"]
         assert settings.max_upload_size == 10 * 1024 * 1024
         assert settings.research_timeout == 180
+        assert settings.layout_intelligence_timeout == 60
+        assert settings.llm_call_timeout == 30
         assert settings.log_level == "INFO"
         assert settings.ibm_api_key is None
         assert settings.ibm_project_id is None
@@ -41,9 +41,11 @@ class TestSettings:
         monkeypatch.setenv("IBM_PROJECT_ID", "test-project-id")
         monkeypatch.setenv("MAX_UPLOAD_SIZE", "5242880")  # 5MB
         monkeypatch.setenv("RESEARCH_TIMEOUT", "120")
-        
+        monkeypatch.setenv("LAYOUT_INTELLIGENCE_TIMEOUT", "45")
+        monkeypatch.setenv("LLM_CALL_TIMEOUT", "20")
+
         settings = Settings()
-        
+
         assert settings.host == "127.0.0.1"
         assert settings.port == 9000
         assert settings.debug is True
@@ -52,6 +54,8 @@ class TestSettings:
         assert settings.ibm_project_id == "test-project-id"
         assert settings.max_upload_size == 5242880
         assert settings.research_timeout == 120
+        assert settings.layout_intelligence_timeout == 45
+        assert settings.llm_call_timeout == 20
 
     def test_validate_api_key_with_placeholder(self):
         """Test API key validation treats placeholder as None."""
@@ -72,16 +76,16 @@ class TestSettings:
         """Test log level validation converts to uppercase."""
         settings = Settings(log_level="debug")
         assert settings.log_level == "DEBUG"
-        
+
         settings = Settings(log_level="info")
         assert settings.log_level == "INFO"
-        
+
         settings = Settings(log_level="warning")
         assert settings.log_level == "WARNING"
-        
+
         settings = Settings(log_level="error")
         assert settings.log_level == "ERROR"
-        
+
         settings = Settings(log_level="critical")
         assert settings.log_level == "CRITICAL"
 
@@ -89,7 +93,7 @@ class TestSettings:
         """Test log level validation rejects invalid values."""
         with pytest.raises(ValidationError) as exc_info:
             Settings(log_level="INVALID")
-        
+
         assert "log_level must be one of" in str(exc_info.value)
 
     def test_port_validation_minimum(self):
@@ -106,10 +110,10 @@ class TestSettings:
         """Test port validation with valid values."""
         settings = Settings(port=1)
         assert settings.port == 1
-        
+
         settings = Settings(port=65535)
         assert settings.port == 65535
-        
+
         settings = Settings(port=8080)
         assert settings.port == 8080
 
@@ -137,12 +141,54 @@ class TestSettings:
         """Test research timeout validation with valid values."""
         settings = Settings(research_timeout=30)
         assert settings.research_timeout == 30
-        
+
         settings = Settings(research_timeout=600)
         assert settings.research_timeout == 600
-        
+
         settings = Settings(research_timeout=180)
         assert settings.research_timeout == 180
+
+    def test_layout_intelligence_timeout_validation_minimum(self):
+        """Test layout intelligence timeout validation minimum value."""
+        with pytest.raises(ValidationError):
+            Settings(layout_intelligence_timeout=14)
+
+    def test_layout_intelligence_timeout_validation_maximum(self):
+        """Test layout intelligence timeout validation maximum value."""
+        with pytest.raises(ValidationError):
+            Settings(layout_intelligence_timeout=181)
+
+    def test_layout_intelligence_timeout_validation_valid_range(self):
+        """Test layout intelligence timeout validation with valid values."""
+        settings = Settings(layout_intelligence_timeout=15)
+        assert settings.layout_intelligence_timeout == 15
+
+        settings = Settings(layout_intelligence_timeout=180)
+        assert settings.layout_intelligence_timeout == 180
+
+        settings = Settings(layout_intelligence_timeout=60)
+        assert settings.layout_intelligence_timeout == 60
+
+    def test_llm_call_timeout_validation_minimum(self):
+        """Test LLM call timeout validation minimum value."""
+        with pytest.raises(ValidationError):
+            Settings(llm_call_timeout=9)
+
+    def test_llm_call_timeout_validation_maximum(self):
+        """Test LLM call timeout validation maximum value."""
+        with pytest.raises(ValidationError):
+            Settings(llm_call_timeout=91)
+
+    def test_llm_call_timeout_validation_valid_range(self):
+        """Test LLM call timeout validation with valid values."""
+        settings = Settings(llm_call_timeout=10)
+        assert settings.llm_call_timeout == 10
+
+        settings = Settings(llm_call_timeout=90)
+        assert settings.llm_call_timeout == 90
+
+        settings = Settings(llm_call_timeout=30)
+        assert settings.llm_call_timeout == 30
 
     def test_cors_origins_custom(self, monkeypatch):
         """Test custom CORS origins from environment."""
@@ -161,7 +207,7 @@ class TestSettings:
         """Test that environment variables are case-insensitive."""
         monkeypatch.setenv("host", "192.168.1.1")
         monkeypatch.setenv("PORT", "3000")
-        
+
         settings = Settings()
         assert settings.host == "192.168.1.1"
         assert settings.port == 3000
@@ -202,14 +248,14 @@ class TestPPTXEnhancementConfiguration:
     def test_default_template_path(self):
         """Test default template path configuration."""
         from app.config import DEFAULT_TEMPLATE_PATH
-        
+
         assert isinstance(DEFAULT_TEMPLATE_PATH, Path)
         assert DEFAULT_TEMPLATE_PATH == TEMPLATE_DIR / "default.pptx"
 
     def test_extracted_images_dir(self):
         """Test extracted images directory configuration."""
         from app.config import EXTRACTED_IMAGES_DIR
-        
+
         assert isinstance(EXTRACTED_IMAGES_DIR, Path)
         assert EXTRACTED_IMAGES_DIR == UPLOAD_DIR / "extracted"
         assert EXTRACTED_IMAGES_DIR.exists()
@@ -217,13 +263,13 @@ class TestPPTXEnhancementConfiguration:
     def test_extracted_image_expiry_hours(self):
         """Test extracted image expiry configuration."""
         from app.config import EXTRACTED_IMAGE_EXPIRY_HOURS
-        
+
         assert isinstance(EXTRACTED_IMAGE_EXPIRY_HOURS, int)
         assert EXTRACTED_IMAGE_EXPIRY_HOURS == 24
 
     def test_max_markdown_size(self):
         """Test max markdown size configuration."""
         from app.config import MAX_MARKDOWN_SIZE
-        
+
         assert isinstance(MAX_MARKDOWN_SIZE, int)
         assert MAX_MARKDOWN_SIZE == 102400  # 100KB

@@ -52,6 +52,18 @@ class Settings(BaseSettings):
         le=600,
         description="Research timeout in seconds",
     )
+    layout_intelligence_timeout: int = Field(
+        default=60,
+        ge=15,
+        le=180,
+        description="Layout intelligence pipeline timeout in seconds",
+    )
+    llm_call_timeout: int = Field(
+        default=30,
+        ge=10,
+        le=90,
+        description="Individual LLM call timeout in seconds",
+    )
 
     # Logging settings
     log_level: str = Field(

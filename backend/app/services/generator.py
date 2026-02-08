@@ -241,6 +241,20 @@ class PresentationGenerator:
                     return ph
         return None
 
+    def _find_all_body_placeholders(self, slide) -> List[object]:
+        """Find all BODY and OBJECT placeholders on a slide.
+
+        Returns placeholders in order they appear in the slide.
+        Used for Two-Column layouts where multiple BODY placeholders exist.
+        """
+        body_placeholders = []
+        for ph in slide.placeholders:
+            ph_type = ph.placeholder_format.type
+            if ph_type in [PP_PLACEHOLDER.BODY, PP_PLACEHOLDER.OBJECT]:
+                if ph.has_text_frame:
+                    body_placeholders.append(ph)
+        return body_placeholders
+
     def generate(self, template_path: str, slides: List[SlideContent], output_path: str) -> str:
         if not os.path.exists(template_path):
             raise FileNotFoundError(f"Template not found: {template_path}")
@@ -273,7 +287,34 @@ class PresentationGenerator:
             # 2. Handle Bullet Points (Body Text)
             # Priority: BODY > OBJECT
             bullets_to_use = slide_content.bullets or slide_content.bullet_points
-            if bullets_to_use:
+
+            # Check if this is a Two-Column layout (has bullets_right)
+            if slide_content.bullets_right:
+                # Two-Column layout: find all BODY placeholders
+                body_placeholders = self._find_all_body_placeholders(slide)
+
+                if len(body_placeholders) >= 2:
+                    # Two placeholders available: populate left and right columns
+                    if bullets_to_use:
+                        populator.populate_bullets(body_placeholders[0], bullets_to_use, slide_content.theme_color)
+                    populator.populate_bullets(
+                        body_placeholders[1], slide_content.bullets_right, slide_content.theme_color
+                    )
+                elif len(body_placeholders) == 1:
+                    # Graceful degradation: only one placeholder, append right bullets to left
+                    print(
+                        "Warning: Two-Column layout requested but only one BODY placeholder found. "
+                        "Appending right bullets to left column."
+                    )
+                    combined_bullets = list(bullets_to_use) if bullets_to_use else []
+                    combined_bullets.extend(slide_content.bullets_right)
+                    populator.populate_bullets(body_placeholders[0], combined_bullets, slide_content.theme_color)
+                else:
+                    print(
+                        f"Warning: No suitable placeholder found for Two-Column text on slide '{slide_content.title}'"
+                    )
+            elif bullets_to_use:
+                # Standard single-column layout
                 body_placeholder = self._find_placeholder(slide, [PP_PLACEHOLDER.BODY, PP_PLACEHOLDER.OBJECT])
                 if body_placeholder and body_placeholder.has_text_frame:
                     populator.populate_bullets(body_placeholder, bullets_to_use, slide_content.theme_color)

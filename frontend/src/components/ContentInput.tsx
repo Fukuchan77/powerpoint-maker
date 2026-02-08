@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { SlideContent, ContentSource } from "../types";
 import { parseMarkdown } from "../api/pptxEnhancement";
+import { generateFromText } from "../api/layoutIntelligence";
 import axios from "axios";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { TopicInput } from "./TopicInput";
@@ -59,6 +60,7 @@ export function ContentInput({
 }: ContentInputProps) {
   const [source, setSource] = useState<ContentSource>("web_search");
   const [markdownContent, setMarkdownContent] = useState("");
+  const [textContent, setTextContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syntaxError, setSyntaxError] = useState<MarkdownSyntaxError | null>(
@@ -102,6 +104,59 @@ export function ContentInput({
     }
   };
 
+  const handleTextGenerate = async () => {
+    if (!textContent.trim()) {
+      setError("Please enter text content");
+      return;
+    }
+
+    if (textContent.length > 10000) {
+      setError("Text content exceeds 10,000 character limit");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await generateFromText(textContent);
+
+      if (result.warnings && result.warnings.length > 0) {
+        console.warn("Layout intelligence warnings:", result.warnings);
+      }
+
+      onContentGenerated(result.slides);
+    } catch (err: unknown) {
+      console.error("Text generation failed:", err);
+
+      if (axios.isAxiosError(err)) {
+        if (
+          err.code === "ECONNABORTED" ||
+          (err.message && err.message.includes("timeout"))
+        ) {
+          setError(
+            "Request timed out. The text may be too complex. Please try with shorter content.",
+          );
+        } else if (err.response?.status === 504) {
+          setError(
+            "Processing took too long. Please try with shorter or simpler content.",
+          );
+        } else if (err.response?.status === 400) {
+          setError(
+            err.response.data?.detail ||
+              "Invalid input. Please check your text.",
+          );
+        } else {
+          setError("Failed to generate slides. Please try again.");
+        }
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExtractedContent = () => {
     if (extractedSlides) {
       onContentGenerated(extractedSlides);
@@ -132,6 +187,17 @@ export function ContentInput({
           <input
             type="radio"
             name="source"
+            value="text_input"
+            data-testid="source-text-input"
+            checked={source === "text_input"}
+            onChange={() => setSource("text_input")}
+          />
+          <span style={{ marginLeft: "0.5rem" }}>Text Input</span>
+        </label>
+        <label style={{ marginRight: "1rem" }}>
+          <input
+            type="radio"
+            name="source"
             value="markdown"
             data-testid="source-markdown"
             checked={source === "markdown"}
@@ -153,6 +219,53 @@ export function ContentInput({
           </label>
         )}
       </div>
+
+      {source === "text_input" && (
+        <>
+          <div style={{ marginBottom: "0.5rem" }}>
+            <label htmlFor="text-input" style={{ fontWeight: "500" }}>
+              Enter your text content (AI will structure it into slides):
+            </label>
+          </div>
+          <textarea
+            id="text-input"
+            value={textContent}
+            data-testid="text-input-textarea"
+            onChange={(e) => {
+              setTextContent(e.target.value);
+              // Clear errors when user starts typing
+              setError(null);
+            }}
+            placeholder="Enter your presentation content here. The AI will automatically structure it into slides with appropriate layouts.
+
+Example:
+Our company achieved 50% growth this year. We expanded to 3 new markets and launched 5 new products. Customer satisfaction increased to 95%."
+            className="input-field"
+            style={{ minHeight: "200px", fontFamily: "inherit" }}
+            maxLength={10000}
+          />
+          <div
+            style={{
+              fontSize: "0.875rem",
+              color: "#666",
+              marginTop: "0.25rem",
+              textAlign: "right",
+            }}
+            data-testid="character-counter"
+          >
+            {textContent.length} / 10,000
+          </div>
+          <button
+            onClick={handleTextGenerate}
+            disabled={loading || !textContent.trim()}
+            className="btn-primary"
+            data-testid="generate-from-text-btn"
+            style={{ marginTop: "1rem" }}
+          >
+            {loading ? "Generating Slides..." : "Generate Slides"}
+          </button>
+        </>
+      )}
 
       {source === "markdown" && (
         <>

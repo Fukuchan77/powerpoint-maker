@@ -29,7 +29,7 @@ export default defineConfig({
   },
 
   /* Global test timeout */
-  timeout: 120000, // 90 seconds per test
+  timeout: 180000, // 180 seconds per test (3 minutes for slow E2E operations)
 
   /* Expect timeout */
   expect: {

@@ -6,6 +6,7 @@ An AI-powered application that generates PowerPoint presentations from a templat
 
 - **Template Analysis**: Upload your corporate or custom PowerPoint templates.
 - **AI Research**: Automatically researches the provided topic using advanced AI agents.
+- **Text Input**: Transform raw text into structured presentations with AI-powered layout selection.
 - **Content Generation**: Generates slide content structured to fit your template's layout.
 - **PowerPoint Generation**: Produces a downloadable `.pptx` file with preserved formatting.
 - **Preview**: Review and edit the generated content before downloading.
@@ -87,15 +88,40 @@ The system automatically selects the first available provider in this order:
 
 ### Usage
 
+#### Option 1: Web Search (Topic-based)
+
 1.  Start the development servers:
     ```bash
     mise run dev
     ```
 2.  Open your browser to `http://localhost:5173`.
 3.  Upload a PowerPoint template (`.pptx`).
-4.  Enter a topic (e.g., "The Future of AI").
-5.  Click "Generate Content".
-6.  Review the proposed slides and click "Download PowerPoint".
+4.  Select the "Web Search" tab.
+5.  Enter a topic (e.g., "The Future of AI").
+6.  Click "Generate Content".
+7.  Review the proposed slides and click "Download PowerPoint".
+
+#### Option 2: Text Input (Direct Content)
+
+1.  Start the development servers (if not already running).
+2.  Open your browser to `http://localhost:5173`.
+3.  Upload a PowerPoint template (`.pptx`) or use the default template.
+4.  Select the "Text Input" tab.
+5.  Paste or type your content (up to 10,000 characters).
+6.  Click "Generate from Text".
+7.  The AI will automatically:
+    - Structure your content into slides
+    - Select appropriate layouts for each slide
+    - Handle text overflow with smart strategies
+    - Balance Two-Column layouts
+8.  Review the proposed slides and click "Download PowerPoint".
+
+**Text Input Features:**
+- **AI Layout Selection**: Automatically chooses the best layout type for each slide
+- **Overflow Management**: Detects and resolves text overflow using layout changes, page splits, or summarization
+- **Two-Column Support**: Intelligently creates comparison slides with balanced columns
+- **Timeout Protection**: 60-second processing limit with graceful error handling
+- **Character Counter**: Real-time feedback on text length (0 / 10,000)
 
 ## 📚 Documentation
 

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 from typing import List, Optional
@@ -12,6 +13,8 @@ from app.middleware.rate_limit import limiter
 from app.schemas import (
     AnalysisMode,
     ContentExtractionResult,
+    LayoutIntelligenceRequest,
+    LayoutIntelligenceResponse,
     MarkdownParseRequest,
     MarkdownParseResponse,
     PresentationRequest,
@@ -20,6 +23,7 @@ from app.schemas import (
 )
 from app.services.extractor import ContentExtractor
 from app.services.generator import PresentationGenerator
+from app.services.layout_intelligence import LayoutIntelligenceService, OverflowValidator
 from app.services.markdown_parser import MarkdownParser
 from app.services.research import ResearchAgent
 from app.services.template import LayoutRegistry, TemplateAnalyzer
@@ -345,6 +349,134 @@ async def parse_markdown(request: Request, body: MarkdownParseRequest):
     except Exception as e:
         logger.error("parse_markdown_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Markdown parsing failed: {str(e)}") from e
+
+
+@router.post("/layout-intelligence", response_model=LayoutIntelligenceResponse)
+@limiter.limit("5/minute")
+async def layout_intelligence_endpoint(request: Request, body: LayoutIntelligenceRequest):
+    """Transform raw text into structured slides using AI-powered layout intelligence.
+
+    This endpoint uses LLM-based analysis to:
+    1. Structure raw text into logical slides with appropriate layouts
+    2. Detect and resolve text overflow issues
+    3. Map abstract layout types to template-specific layouts
+
+    Args:
+        request: FastAPI request object
+        body: LayoutIntelligenceRequest with text and optional template_id
+
+    Returns:
+        LayoutIntelligenceResponse with structured slides and warnings
+
+    Raises:
+        HTTPException(404): If template not found
+        HTTPException(422): If LLM response validation fails
+        HTTPException(504): If processing times out
+        HTTPException(500): If processing fails unexpectedly
+    """
+    try:
+        logger.info(
+            "layout_intelligence_started",
+            text_length=len(body.text),
+            template_id=body.template_id,
+        )
+
+        # Resolve template path
+        template_path: Optional[str] = None
+        if body.template_id:
+            template_path = find_template_by_id(body.template_id)
+            if not template_path:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Template not found for ID: {body.template_id}",
+                )
+        else:
+            # Use default template
+            if not config.DEFAULT_TEMPLATE_PATH.exists():
+                raise HTTPException(
+                    status_code=404,
+                    detail="Default template not found. Please upload a template.",
+                )
+            template_path = str(config.DEFAULT_TEMPLATE_PATH)
+
+        # Analyze template to get layouts
+        try:
+            analysis = layout_registry.get_or_analyze(template_path, body.template_id or "default")
+            if not analysis.masters or not analysis.masters[0].layouts:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Template has no layouts available",
+                )
+            template_layouts = analysis.masters[0].layouts
+        except Exception as e:
+            logger.error("template_analysis_failed", error=str(e), template_path=template_path)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to analyze template: {str(e)}",
+            ) from e
+
+        # Process with layout intelligence service
+        from app.services.layout_catalog import LayoutTemplateCatalog
+        from app.services.layout_mapper import LayoutTypeMapper
+
+        catalog = LayoutTemplateCatalog()
+        mapper = LayoutTypeMapper()
+        validator = OverflowValidator()
+        service = LayoutIntelligenceService(catalog=catalog, mapper=mapper, validator=validator)
+
+        try:
+            # Wrap in asyncio.timeout for pipeline timeout
+            async with asyncio.timeout(config.settings.layout_intelligence_timeout):
+                result = await service.process(
+                    text=body.text,
+                    template_layouts=template_layouts,
+                    timeout_seconds=float(config.settings.layout_intelligence_timeout),
+                )
+
+            logger.info(
+                "layout_intelligence_success",
+                slide_count=len(result.slides),
+                template_id=body.template_id,
+                warning_count=len(result.warnings),
+            )
+
+            return LayoutIntelligenceResponse(
+                slides=result.slides,
+                warnings=result.warnings,
+            )
+
+        except asyncio.TimeoutError as e:
+            logger.error(
+                "layout_intelligence_timeout",
+                timeout=config.settings.layout_intelligence_timeout,
+                template_id=body.template_id,
+            )
+            raise HTTPException(
+                status_code=504,
+                detail=f"Layout intelligence processing timed out after {config.settings.layout_intelligence_timeout}s",
+            ) from e
+        except ValueError as e:
+            # Validation errors from LLM response
+            logger.error("layout_intelligence_validation_error", error=str(e))
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid LLM response format: {str(e)}",
+            ) from e
+        except Exception as e:
+            logger.error("layout_intelligence_processing_failed", error=str(e), error_type=type(e).__name__)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Layout intelligence processing failed: {str(e)}",
+            ) from e
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("layout_intelligence_unexpected_error", error=str(e), error_type=type(e).__name__)
+        raise HTTPException(
+            status_code=500,
+            detail="An unexpected error occurred during layout intelligence processing",
+        ) from e
 
 
 @router.get("/extracted-images/{extraction_id}/{image_id}")
