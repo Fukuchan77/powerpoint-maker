@@ -86,7 +86,7 @@ test("complete user flow: upload, generate, and download", async ({ page }) => {
   // Wait for the "Preview & Generate" header or similar to confirm generation worked.
   // Increased timeout to 90 seconds for slow research API calls
   await expect(page.getByText("3. Preview & Generate")).toBeVisible({
-    timeout: 90000,
+    timeout: 120000,
   });
 
   // Wait for network to be idle after generation

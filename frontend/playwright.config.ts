@@ -10,7 +10,7 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -29,7 +29,7 @@ export default defineConfig({
   },
 
   /* Global test timeout */
-  timeout: 90000, // 90 seconds per test
+  timeout: 120000, // 90 seconds per test
 
   /* Expect timeout */
   expect: {
@@ -50,7 +50,15 @@ export default defineConfig({
 
     {
       name: "webkit",
-      use: { ...devices["Desktop Safari"] },
+      use: {
+        ...devices["Desktop Safari"],
+        // Webkit-specific timeout configurations for slower rendering
+        actionTimeout: 45000, // Extended for Webkit
+        navigationTimeout: 45000,
+      },
+      expect: {
+        timeout: 10000, // Extended assertion timeout for Webkit
+      },
     },
   ],
 

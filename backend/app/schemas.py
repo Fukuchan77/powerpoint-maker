@@ -1,6 +1,27 @@
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
+# === Enums for PPTX Enhancement ===
+
+
+class AnalysisMode(str, Enum):
+    """PPTX analysis mode [REQ-1.1.1, REQ-1.2.1]"""
+
+    CONTENT = "content"  # Extract content (text, images, charts)
+    TEMPLATE = "template"  # Extract layout only
+
+
+class ContentSource(str, Enum):
+    """Content source type [REQ-3.2.1]"""
+
+    WEB_SEARCH = "web_search"
+    MARKDOWN = "markdown"
+    EXTRACTED = "extracted"
+
+
+# === Existing Models ===
 
 
 class PlaceholderInfo(BaseModel):
@@ -73,3 +94,68 @@ class PresentationRequest(BaseModel):
     template_id: Optional[str] = None
     slides: List[SlideContent]
     topic: Optional[str] = None
+
+
+# === New Models for PPTX Enhancement ===
+
+
+class ExtractedImage(BaseModel):
+    """Extracted image info [REQ-1.1.2]"""
+
+    id: str = Field(..., description="Image unique ID (UUID)")
+    filename: str = Field(..., description="Original filename")
+    url: str = Field(..., description="Temporary access URL")
+    slide_index: int = Field(..., ge=0, description="Source slide number")
+    content_type: str = Field(..., description="MIME type")
+
+
+class ExtractedChart(BaseModel):
+    """Extracted chart info [REQ-1.1.4]"""
+
+    slide_index: int = Field(..., ge=0)
+    chart_type: str = Field(..., description="Chart type")
+    categories: List[str] = Field(default_factory=list)
+    series: List[ChartSeries] = Field(default_factory=list)
+
+
+class ExtractedSlideContent(BaseModel):
+    """Extracted slide content [REQ-1.1.1, REQ-1.1.5]"""
+
+    slide_index: int = Field(..., ge=0)
+    layout_index: int = Field(..., ge=0)
+    title: Optional[str] = None
+    body_text: List[str] = Field(default_factory=list)
+    bullet_points: List[BulletPoint] = Field(default_factory=list)
+    image_refs: List[str] = Field(default_factory=list)
+    chart: Optional[ExtractedChart] = None
+
+
+class ContentExtractionResult(BaseModel):
+    """Content extraction result [REQ-1.1.1~REQ-1.1.5]"""
+
+    extraction_id: str = Field(..., description="Extraction session ID")
+    filename: str = Field(..., description="Original PPTX filename")
+    expires_at: str = Field(..., description="Expiry time (ISO 8601)")
+    slides: List[ExtractedSlideContent]
+    images: List[ExtractedImage]
+    warnings: List[str] = Field(default_factory=list, description="Warnings for skipped elements")
+
+
+class MarkdownParseRequest(BaseModel):
+    """Markdown parse request [REQ-3.1.1~REQ-3.1.5]"""
+
+    content: str = Field(..., max_length=102400, description="Markdown text (max 100KB)")
+
+
+class MarkdownParseResponse(BaseModel):
+    """Markdown parse result [REQ-3.2.2]"""
+
+    presentation_title: Optional[str] = None
+    slides: List[SlideContent]
+    warnings: List[str] = Field(default_factory=list)
+
+
+class ExtractContentRequest(BaseModel):
+    """Content extraction request"""
+
+    mode: AnalysisMode = Field(..., description="Analysis mode")

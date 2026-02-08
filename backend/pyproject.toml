@@ -17,6 +17,9 @@ dependencies = [
     "python-json-logger>=2.0.7",
     "slowapi>=0.1.9",
     "tenacity>=8.2.0",
+    # PPTX Enhancement dependencies
+    "markdown-it-py>=3.0.0",
+    "APScheduler>=3.10.0",
 ]
 
 [dependency-groups]

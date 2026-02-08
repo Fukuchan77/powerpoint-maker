@@ -136,13 +136,18 @@ def test_analyze_template_invalid_file_type():
 
 
 def test_generate_template_not_found():
-    """Test generating with a non-existent template ID"""
+    """Test generating with a non-existent template ID when no default template exists"""
     payload = {
         "template_id": "non-existent-id",
         "template_filename": "dummy.pptx",  # Required by schema
         "slides": [{"layout_index": 0, "title": "Test"}],
     }
-    response = client.post("/api/generate", json=payload)
+
+    # Mock DEFAULT_TEMPLATE_PATH to not exist
+    with patch("app.api.routes.config.DEFAULT_TEMPLATE_PATH") as mock_default:
+        mock_default.exists.return_value = False
+        response = client.post("/api/generate", json=payload)
+
     assert response.status_code == 404
     assert "Template file not found" in response.json()["detail"]
 

@@ -61,3 +61,52 @@ export interface PresentationRequest {
   slides: SlideContent[];
   topic?: string;
 }
+
+// === PPTX Enhancement Types ===
+
+export type AnalysisMode = "content" | "template";
+export type ContentSource = "web_search" | "markdown" | "extracted";
+
+export interface ExtractedImage {
+  id: string;
+  filename: string;
+  url: string;
+  slide_index: number;
+  content_type: string;
+}
+
+export interface ExtractedChart {
+  slide_index: number;
+  chart_type: string;
+  categories: string[];
+  series: ChartSeries[];
+}
+
+export interface ExtractedSlideContent {
+  slide_index: number;
+  layout_index: number;
+  title: string | null;
+  body_text: string[];
+  bullet_points: BulletPoint[];
+  image_refs: string[];
+  chart: ExtractedChart | null;
+}
+
+export interface ContentExtractionResult {
+  extraction_id: string;
+  filename: string;
+  expires_at: string;
+  slides: ExtractedSlideContent[];
+  images: ExtractedImage[];
+  warnings: string[];
+}
+
+export interface MarkdownParseRequest {
+  content: string;
+}
+
+export interface MarkdownParseResponse {
+  presentation_title: string | null;
+  slides: SlideContent[];
+  warnings: string[];
+}

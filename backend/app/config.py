@@ -89,3 +89,18 @@ TEMPLATE_DIR = BASE_DIR / "templates"
 # Ensure directories exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+
+# === PPTX Enhancement Configuration ===
+
+# Default template settings [REQ-2.1]
+DEFAULT_TEMPLATE_PATH: Path = TEMPLATE_DIR / "default.pptx"
+
+# Temporary image settings [REQ-1.1.3]
+EXTRACTED_IMAGE_EXPIRY_HOURS: int = 24
+EXTRACTED_IMAGES_DIR: Path = UPLOAD_DIR / "extracted"
+
+# Markdown input settings [REQ-3.1.x]
+MAX_MARKDOWN_SIZE: int = 102400  # 100KB
+
+# Ensure extracted images directory exists
+EXTRACTED_IMAGES_DIR.mkdir(parents=True, exist_ok=True)

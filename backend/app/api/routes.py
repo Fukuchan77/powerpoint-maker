@@ -2,14 +2,25 @@ import os
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from app import config
 from app.core.logging import get_logger
+from app.exceptions import MarkdownSyntaxError
 from app.middleware.rate_limit import limiter
-from app.schemas import PresentationRequest, SlideContent, TemplateAnalysisResult
+from app.schemas import (
+    AnalysisMode,
+    ContentExtractionResult,
+    MarkdownParseRequest,
+    MarkdownParseResponse,
+    PresentationRequest,
+    SlideContent,
+    TemplateAnalysisResult,
+)
+from app.services.extractor import ContentExtractor
 from app.services.generator import PresentationGenerator
+from app.services.markdown_parser import MarkdownParser
 from app.services.research import ResearchAgent
 from app.services.template import LayoutRegistry, TemplateAnalyzer
 from app.utils.file_validation import get_safe_filename, validate_template_file
@@ -213,8 +224,12 @@ async def generate_presentation(request: Request, gen_request: PresentationReque
                 if potential_path.exists():
                     template_path = str(potential_path)
 
+        # Fallback to default template [REQ-2.1]
         if not template_path:
-            raise HTTPException(status_code=404, detail="Template file not found")
+            if config.DEFAULT_TEMPLATE_PATH.exists():
+                template_path = str(config.DEFAULT_TEMPLATE_PATH)
+            else:
+                raise HTTPException(status_code=404, detail="Template file not found")
 
         # Generate presentation
         output_filename = f"generated_{uuid.uuid4()}.pptx"
@@ -232,3 +247,138 @@ async def generate_presentation(request: Request, gen_request: PresentationReque
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}") from e
+
+
+# === PPTX Enhancement API Endpoints ===
+
+markdown_parser = MarkdownParser()
+
+
+@router.post("/extract-content", response_model=ContentExtractionResult)
+@limiter.limit("10/minute")
+async def extract_content(
+    request: Request,
+    file: UploadFile = File(...),  # noqa: B008
+    mode: AnalysisMode = Query(AnalysisMode.CONTENT),  # noqa: B008
+):
+    """Extract content from PPTX file [REQ-1.1.1~REQ-1.2.1]
+
+    Args:
+        request: FastAPI request object
+        file: Uploaded PowerPoint file
+        mode: Analysis mode (content or template)
+
+    Returns:
+        ContentExtractionResult with extracted slides, images, and warnings
+    """
+    try:
+        # Validate file
+        content = await validate_template_file(file)
+
+        # Save temporarily
+        temp_id = str(uuid.uuid4())
+        temp_path = config.UPLOAD_DIR / f"temp_{temp_id}.pptx"
+        temp_path.write_bytes(content)
+
+        try:
+            # Get base URL from request
+            base_url = str(request.base_url).rstrip("/")
+            extractor = ContentExtractor(base_url)
+            result = await extractor.extract(temp_path, mode)
+            return result
+        finally:
+            # Clean up temp file
+            if temp_path.exists():
+                temp_path.unlink()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("extract_content_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Content extraction failed: {str(e)}") from e
+
+
+@router.post("/parse-markdown", response_model=MarkdownParseResponse)
+@limiter.limit("20/minute")
+async def parse_markdown(request: Request, body: MarkdownParseRequest):
+    """Parse Markdown text to slide content [REQ-3.1.1~REQ-3.2.2]
+
+    Args:
+        request: FastAPI request object
+        body: MarkdownParseRequest with Markdown content
+
+    Returns:
+        MarkdownParseResponse with parsed slides and warnings
+
+    Raises:
+        HTTPException(400): If Markdown syntax is invalid [REQ-5.2]
+        HTTPException(500): If parsing fails unexpectedly
+    """
+    try:
+        if len(body.content) > config.MAX_MARKDOWN_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Markdown content exceeds maximum size of {config.MAX_MARKDOWN_SIZE} bytes",
+            )
+
+        result = markdown_parser.parse(body.content)
+        return result
+
+    except MarkdownSyntaxError as e:
+        # Return structured error response [REQ-5.2]
+        logger.warning(
+            "markdown_syntax_error",
+            line=e.line,
+            column=e.column,
+            message=e.message,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error_code": "MARKDOWN_SYNTAX_ERROR",
+                "message": e.message,
+                "location": {"line": e.line, "column": e.column},
+            },
+        ) from e
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("parse_markdown_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Markdown parsing failed: {str(e)}") from e
+
+
+@router.get("/extracted-images/{extraction_id}/{image_id}")
+async def get_extracted_image(extraction_id: str, image_id: str):
+    """Serve extracted image by ID [REQ-1.1.3]
+
+    Args:
+        extraction_id: Extraction session ID
+        image_id: Image ID within the extraction
+
+    Returns:
+        Image file response
+
+    Raises:
+        HTTPException: If image not found or expired
+    """
+    # Validate UUIDs to prevent path traversal
+    try:
+        uuid.UUID(extraction_id)
+        uuid.UUID(image_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Invalid ID format") from e
+
+    # Build path to image directory
+    extraction_dir = config.EXTRACTED_IMAGES_DIR / extraction_id / "images"
+    if not extraction_dir.exists():
+        raise HTTPException(status_code=404, detail="Image not found or expired")
+
+    # Find image file
+    for img_file in extraction_dir.iterdir():
+        if img_file.stem == image_id:
+            return FileResponse(
+                str(img_file),
+                media_type=f"image/{img_file.suffix.lstrip('.')}",
+            )
+
+    raise HTTPException(status_code=404, detail="Image not found")
