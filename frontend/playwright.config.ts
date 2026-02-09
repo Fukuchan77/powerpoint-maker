@@ -9,8 +9,8 @@ export default defineConfig({
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 1,
+  /* Retry on CI only (P1-3 fix: local development uses 0 retries for early flaky detection) */
+  retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -21,15 +21,15 @@ export default defineConfig({
     baseURL: "http://localhost:5173",
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: "on-first-retry",
+    trace: "retain-on-failure",
 
     /* Increase timeouts for slow API operations */
     actionTimeout: 30000, // 30 seconds for actions
     navigationTimeout: 30000, // 30 seconds for navigation
   },
 
-  /* Global test timeout */
-  timeout: 180000, // 180 seconds per test (3 minutes for slow E2E operations)
+  /* Global test timeout (P1-2 fix: reduced from 180s to 60s for mock environments) */
+  timeout: 60000, // 60 seconds per test
 
   /* Expect timeout */
   expect: {
@@ -52,12 +52,9 @@ export default defineConfig({
       name: "webkit",
       use: {
         ...devices["Desktop Safari"],
-        // Webkit-specific timeout configurations for slower rendering
-        actionTimeout: 45000, // Extended for Webkit
-        navigationTimeout: 45000,
-      },
-      expect: {
-        timeout: 10000, // Extended assertion timeout for Webkit
+        // P0-5 fix: Extended assertion timeout for Webkit (was 10000, now 40000)
+        // Webkit has slower rendering, so needs more time
+        expect: { timeout: 40000 },
       },
     },
   ],

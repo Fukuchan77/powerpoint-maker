@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ['**'] # Run on all branches
   pull_request:
-    branches: [main]
+    branches: ['**'] # Run on PRs to all branches
 
 # Cancel running workflows on new push
 concurrency:
@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.12"
-  NODE_VERSION: "lts/*"
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: 'lts/*'
 
 jobs:
   # ==========================================================================
@@ -52,7 +52,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install frontend dependencies
@@ -129,7 +129,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
@@ -167,7 +167,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
@@ -219,7 +219,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install frontend dependencies
@@ -237,8 +237,8 @@ jobs:
           uv run fastapi run app/main.py --port 8000 &
           sleep 5
         env:
-          DEBUG: "false"
-          LOG_LEVEL: "WARNING"
+          DEBUG: 'false'
+          LOG_LEVEL: 'WARNING'
 
       # Run E2E tests
       - name: Run E2E tests

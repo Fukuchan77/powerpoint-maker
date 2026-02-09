@@ -26,6 +26,17 @@ An AI-powered application that generates PowerPoint presentations from a templat
     mise install
     ```
     (Or manually install backend dependencies with `uv` and frontend with `pnpm`)
+3.  **Setup Git hooks** (recommended):
+
+    ```bash
+    # Install pre-commit hooks (runs on commit)
+    pre-commit install
+
+    # Install pre-push hooks (runs before push)
+    mise run setup-hooks
+    # or alternatively:
+    ./scripts/setup-git-hooks.sh
+    ```
 
 ### Configuration
 
@@ -33,32 +44,33 @@ Create a `.env` file in the `backend` directory based on `.env.example`:
 
 #### Required Environment Variables
 
-| Variable | Required | Description | Default |
-|----------|----------|-------------|---------|
-| `WATSONX_API_KEY` | Yes | API Key for IBM watsonx | - |
-| `WATSONX_PROJECT_ID` | Yes | Project ID for IBM watsonx | - |
-| `WATSONX_URL` | Yes | IBM watsonx API endpoint | `https://us-south.ml.cloud.ibm.com` |
+| Variable             | Required | Description                | Default                             |
+| -------------------- | -------- | -------------------------- | ----------------------------------- |
+| `WATSONX_API_KEY`    | Yes      | API Key for IBM watsonx    | -                                   |
+| `WATSONX_PROJECT_ID` | Yes      | Project ID for IBM watsonx | -                                   |
+| `WATSONX_URL`        | Yes      | IBM watsonx API endpoint   | `https://us-south.ml.cloud.ibm.com` |
 
 #### Optional Environment Variables
 
-| Variable | Required | Description | Default |
-|----------|----------|-------------|---------|
-| `OPENAI_API_KEY` | No | API Key for OpenAI (alternative provider) | - |
-| `ANTHROPIC_API_KEY` | No | API Key for Anthropic Claude (alternative provider) | - |
-| `GOOGLE_API_KEY` | No | API Key for Google Gemini (alternative provider) | - |
-| `HOST` | No | Server host address | `0.0.0.0` |
-| `PORT` | No | Server port number | `8000` |
-| `DEBUG` | No | Debug mode | `false` |
-| `CORS_ORIGINS` | No | Allowed CORS origins (comma-separated) | `http://localhost:5173` |
-| `MAX_UPLOAD_SIZE` | No | Maximum file upload size (bytes) | `10485760` (10MB) |
-| `RESEARCH_TIMEOUT` | No | Research operation timeout (seconds) | `180` |
-| `LOG_LEVEL` | No | Logging level | `INFO` |
+| Variable            | Required | Description                                         | Default                 |
+| ------------------- | -------- | --------------------------------------------------- | ----------------------- |
+| `OPENAI_API_KEY`    | No       | API Key for OpenAI (alternative provider)           | -                       |
+| `ANTHROPIC_API_KEY` | No       | API Key for Anthropic Claude (alternative provider) | -                       |
+| `GOOGLE_API_KEY`    | No       | API Key for Google Gemini (alternative provider)    | -                       |
+| `HOST`              | No       | Server host address                                 | `0.0.0.0`               |
+| `PORT`              | No       | Server port number                                  | `8000`                  |
+| `DEBUG`             | No       | Debug mode                                          | `false`                 |
+| `CORS_ORIGINS`      | No       | Allowed CORS origins (comma-separated)              | `http://localhost:5173` |
+| `MAX_UPLOAD_SIZE`   | No       | Maximum file upload size (bytes)                    | `10485760` (10MB)       |
+| `RESEARCH_TIMEOUT`  | No       | Research operation timeout (seconds)                | `180`                   |
+| `LOG_LEVEL`         | No       | Logging level                                       | `INFO`                  |
 
 #### LLM Provider Setup
 
 This project uses the BeeAI Framework, which supports multiple LLM providers.
 
 ##### Primary: IBM watsonx (Recommended)
+
 1. Sign up at [IBM Cloud](https://cloud.ibm.com/)
 2. Create a watsonx.ai project
 3. Get your API key and Project ID from the credentials page
@@ -67,24 +79,27 @@ This project uses the BeeAI Framework, which supports multiple LLM providers.
 ##### Alternative Providers (Optional)
 
 **OpenAI:**
+
 1. Get API key from [OpenAI Platform](https://platform.openai.com/)
 2. Uncomment and set `OPENAI_API_KEY` in `.env`
 
 **Anthropic Claude:**
+
 1. Get API key from [Anthropic Console](https://console.anthropic.com/)
 2. Uncomment and set `ANTHROPIC_API_KEY` in `.env`
 
 **Google Gemini:**
+
 1. Get API key from [Google AI Studio](https://makersuite.google.com/)
 2. Uncomment and set `GOOGLE_API_KEY` in `.env`
 
 **Provider Selection Priority:**
 The system automatically selects the first available provider in this order:
+
 1. Claude (if `ANTHROPIC_API_KEY` is set)
 2. OpenAI (if `OPENAI_API_KEY` is set)
 3. Gemini (if `GOOGLE_API_KEY` is set)
 4. IBM watsonx (if `WATSONX_API_KEY` is set)
-
 
 ### Usage
 
@@ -117,6 +132,7 @@ The system automatically selects the first available provider in this order:
 8.  Review the proposed slides and click "Download PowerPoint".
 
 **Text Input Features:**
+
 - **AI Layout Selection**: Automatically chooses the best layout type for each slide
 - **Overflow Management**: Detects and resolves text overflow using layout changes, page splits, or summarization
 - **Two-Column Support**: Intelligently creates comparison slides with balanced columns
@@ -140,6 +156,70 @@ The system automatically selects the first available provider in this order:
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-## 📄 License
+## � CI/CD Workflow
+
+This project uses a 3-stage quality assurance approach:
+
+### 1. Pre-commit (Local - Before Commit) ⚡
+
+**Time: 5-15 seconds**
+
+Automatically runs on `git commit`:
+
+- Backend: Ruff linting and formatting
+- Frontend: Prettier formatting and ESLint
+- General: Trailing whitespace, YAML/JSON validation
+
+Managed by `.pre-commit-config.yaml`.
+
+### 2. Pre-push (Local - Before Push) 🚀
+
+**Time: 1-3 minutes**
+
+Automatically runs on `git push`:
+
+- Backend: Ruff linting + fast unit tests
+- Frontend: TypeScript type checking + tests + build verification
+
+**Install**: `mise run setup-hooks` or `./scripts/setup-git-hooks.sh`
+
+**Manual run**: `mise run pre-push-check`
+
+**Skip** (not recommended): `git push --no-verify`
+
+### 3. GitHub Actions CI (Remote - After Push) ☁️
+
+**Time: 5-15 minutes**
+
+Runs on all branches and pull requests:
+
+- Linting and formatting checks
+- Backend: Full test suite + coverage
+- Frontend: Full test suite + coverage
+- E2E tests (Chromium)
+- Build verification
+
+### Available Commands
+
+```bash
+# Test commands
+mise run test-fast        # Fast unit tests only (1-3 min)
+mise run test-full        # All tests including integration (5-10 min)
+
+# Check commands
+mise run build-check      # Verify build works
+mise run pre-push-check   # Run same checks as pre-push hook
+
+# Setup
+mise run setup-hooks      # Install git pre-push hooks
+
+# Individual tasks
+mise run backend:lint     # Lint backend only
+mise run backend:test     # Test backend only
+mise run frontend:lint    # Lint frontend only
+mise run frontend:test    # Test frontend only
+```
+
+## �📄 License
 
 [MIT](LICENSE) - Copyright (c) 2026 PowerPoint Maker Contributors

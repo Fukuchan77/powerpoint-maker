@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { SlideContent, ContentSource } from "../types";
-import { parseMarkdown } from "../api/pptxEnhancement";
-import { generateFromText } from "../api/layoutIntelligence";
 import axios from "axios";
+import { useState } from "react";
+import { generateFromText } from "../api/layoutIntelligence";
+import { parseMarkdown } from "../api/pptxEnhancement";
+import type { ContentSource, SlideContent } from "../types";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { TopicInput } from "./TopicInput";
 
@@ -324,7 +324,11 @@ Our company achieved 50% growth this year. We expanded to 3 new markets and laun
       {syntaxError && <SyntaxErrorDisplay error={syntaxError} />}
 
       {/* Show generic error */}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && (
+        <p style={{ color: "red" }} data-testid="error-message">
+          {error}
+        </p>
+      )}
 
       {source === "web_search" && (
         <div style={{ marginTop: "1rem" }}>

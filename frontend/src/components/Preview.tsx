@@ -1,5 +1,5 @@
-import { useState } from "react";
 import axios from "axios";
+import { useState } from "react";
 import type { SlideContent, TemplateAnalysisResult } from "../types";
 
 interface PreviewProps {
@@ -39,7 +39,7 @@ export function Preview({ slides: initialSlides, template }: PreviewProps) {
   };
 
   return (
-    <div className="card">
+    <div className="card" data-testid="preview-section">
       <h2 className="input-label">3. Preview & Generate</h2>
 
       <div

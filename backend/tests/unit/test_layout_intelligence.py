@@ -765,9 +765,7 @@ async def test_process_returns_warnings_on_mapper_fallback(service, mock_llm, sa
     # Use a mapper that raises ValueError for layout_type_id=4 (no Two-Column in template)
     mock_mapper = MagicMock()
     mock_mapper.build_mapping.return_value = {1: 0, 2: 1}
-    mock_mapper.map_type_to_index.side_effect = ValueError(
-        "No compatible layout found for layout type 4 (Two-Column)"
-    )
+    mock_mapper.map_type_to_index.side_effect = ValueError("No compatible layout found for layout type 4 (Two-Column)")
 
     service_with_mock_mapper = LayoutIntelligenceService(
         catalog=service.catalog,

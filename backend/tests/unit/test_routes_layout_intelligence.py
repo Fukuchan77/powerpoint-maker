@@ -255,9 +255,7 @@ async def test_layout_intelligence_with_warnings(mock_request, valid_request):
                 bullet_points=["Point 1"],
             )
         ],
-        warnings=[
-            "No compatible layout found for layout type 4 (Two-Column), used Title+Bullets instead"
-        ],
+        warnings=["No compatible layout found for layout type 4 (Two-Column), used Title+Bullets instead"],
     )
 
     with (

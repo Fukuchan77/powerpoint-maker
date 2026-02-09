@@ -23,3 +23,106 @@ node = "lts"
 # Composite Tasks
 "dev" = { depends = ["backend:dev", "frontend:dev"], description = "Start both servers" }
 "install" = { depends = ["frontend:install"], description = "Install all dependencies" }
+
+# CI/CD Tasks
+"test-fast" = { run = """
+#!/bin/bash
+set -e
+echo "🧪 Running fast backend tests..."
+cd backend && uv run pytest tests/unit -v --tb=short -x
+echo "🧪 Running frontend tests..."
+cd ../frontend && pnpm test --run
+echo "✅ Fast tests passed!"
+""", description = "Run fast unit tests only (for pre-push)" }
+
+"test-full" = { run = """
+#!/bin/bash
+set -e
+echo "🧪 Running all backend tests..."
+cd backend && uv run pytest -v
+echo "🧪 Running all frontend tests..."
+cd ../frontend && pnpm test --run
+echo "✅ All tests passed!"
+""", description = "Run all tests including integration and E2E" }
+
+"build-check" = { run = """
+#!/bin/bash
+set -e
+echo "🔨 Checking frontend build..."
+cd frontend && pnpm build
+echo "✅ Build check passed!"
+""", description = "Verify builds work correctly" }
+
+"pre-push-check" = { run = """
+#!/bin/bash
+set -e
+echo "🔍 Running pre-push checks..."
+echo "📦 Backend checks..."
+cd backend
+uv run ruff check .
+uv run pytest tests/unit -v --tb=short -x
+echo "📦 Frontend checks..."
+cd ../frontend
+pnpm exec tsc --noEmit
+pnpm test --run
+pnpm build
+echo "✅ All pre-push checks passed!"
+""", description = "Run all pre-push checks (same as pre-push hook)" }
+
+"setup-hooks" = { run = """
+#!/bin/bash
+set -e
+echo "🔧 Setting up git hooks..."
+cat > .git/hooks/pre-push << 'EOF'
+#!/bin/bash
+echo "🚀 Running pre-push checks..."
+echo ""
+cd "$(git rev-parse --show-toplevel)"
+echo "📦 Backend: Linting and fast tests..."
+cd backend
+if ! command -v uv &> /dev/null; then
+  echo "❌ Error: uv is not installed"
+  exit 1
+fi
+if ! uv run ruff check .; then
+  echo "❌ Backend linting failed"
+  exit 1
+fi
+echo "   ✓ Linting passed"
+if ! uv run pytest tests/unit -v --tb=short -x; then
+  echo "❌ Backend unit tests failed"
+  exit 1
+fi
+echo "   ✓ Unit tests passed"
+cd ..
+echo ""
+echo "📦 Frontend: Type check, tests, and build..."
+cd frontend
+if ! command -v pnpm &> /dev/null; then
+  echo "❌ Error: pnpm is not installed"
+  exit 1
+fi
+if ! pnpm exec tsc --noEmit; then
+  echo "❌ Frontend type check failed"
+  exit 1
+fi
+echo "   ✓ Type check passed"
+if ! pnpm test --run; then
+  echo "❌ Frontend tests failed"
+  exit 1
+fi
+echo "   ✓ Tests passed"
+if ! pnpm build; then
+  echo "❌ Frontend build failed"
+  exit 1
+fi
+echo "   ✓ Build passed"
+cd ..
+echo ""
+echo "✅ All pre-push checks passed! Pushing..."
+EOF
+chmod +x .git/hooks/pre-push
+echo "✅ Git hooks installed successfully!"
+echo ""
+echo "💡 To skip checks: git push --no-verify"
+""", description = "Install git hooks for pre-push checks" }
