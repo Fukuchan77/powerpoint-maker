@@ -1,6 +1,6 @@
-import axios from "axios";
-import { useState } from "react";
-import type { SlideContent, TemplateAnalysisResult } from "../types";
+import axios from 'axios';
+import { useState } from 'react';
+import type { SlideContent, TemplateAnalysisResult } from '../types';
 
 interface PreviewProps {
   slides: SlideContent[];
@@ -16,23 +16,23 @@ export function Preview({ slides: initialSlides, template }: PreviewProps) {
     setGenerating(true);
     try {
       const response = await axios.post(
-        "/api/generate",
+        '/api/generate',
         {
           template_filename: template.filename,
           template_id: template.template_id,
           slides: slides,
-          topic: "User Topic", // Optional
+          topic: 'User Topic', // Optional
         },
         {
-          responseType: "blob",
-        },
+          responseType: 'blob',
+        }
       );
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       setDownloadUrl(url);
     } catch (err) {
-      console.error("Generation failed", err);
-      alert("Generation failed");
+      console.error('Generation failed', err);
+      alert('Generation failed');
     } finally {
       setGenerating(false);
     }
@@ -44,57 +44,60 @@ export function Preview({ slides: initialSlides, template }: PreviewProps) {
 
       <div
         style={{
-          maxHeight: "400px",
-          overflowY: "auto",
-          marginBottom: "1rem",
-          border: "1px solid #ddd",
-          padding: "1rem",
+          maxHeight: '400px',
+          overflowY: 'auto',
+          marginBottom: '1rem',
+          border: '1px solid #ddd',
+          padding: '1rem',
         }}
       >
         {slides.map((slide, idx) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: List is static
             key={idx}
             style={{
-              marginBottom: "1rem",
-              paddingBottom: "1rem",
-              borderBottom: "1px solid #eee",
+              marginBottom: '1rem',
+              paddingBottom: '1rem',
+              borderBottom: '1px solid #eee',
             }}
           >
-            <h3 style={{ margin: "0 0 0.5rem 0" }}>
+            <h3 style={{ margin: '0 0 0.5rem 0' }}>
               Slide {idx + 1}: {slide.title}
             </h3>
             <ul>
               {slide.bullet_points.map((point, pIdx) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: List is static
                 <li key={pIdx}>{point}</li>
               ))}
             </ul>
-            <label style={{ fontSize: "0.8rem", color: "#666" }}>
+            <label style={{ fontSize: '0.8rem', color: '#666' }}>
               Layout Index:
               <input
                 type="number"
                 value={slide.layout_index}
                 onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val)) {
+                  const val = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(val)) {
                     const newSlides = [...slides];
                     newSlides[idx].layout_index = val;
                     setSlides(newSlides);
                   }
                 }}
-                style={{ marginLeft: "0.5rem", width: "50px" }}
+                style={{ marginLeft: '0.5rem', width: '50px' }}
               />
             </label>
           </div>
         ))}
       </div>
 
-      <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
         <button
+          type="button"
           onClick={handleGenerate}
           disabled={generating}
           className="btn-primary"
         >
-          {generating ? "Generating PPTX..." : "Generate Presentation"}
+          {generating ? 'Generating PPTX...' : 'Generate Presentation'}
         </button>
 
         {downloadUrl && (
@@ -102,7 +105,7 @@ export function Preview({ slides: initialSlides, template }: PreviewProps) {
             href={downloadUrl}
             download="presentation.pptx"
             className="btn-primary"
-            style={{ textDecoration: "none", backgroundColor: "#10b981" }}
+            style={{ textDecoration: 'none', backgroundColor: '#10b981' }}
           >
             Download .pptx
           </a>

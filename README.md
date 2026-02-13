@@ -42,64 +42,88 @@ An AI-powered application that generates PowerPoint presentations from a templat
 
 Create a `.env` file in the `backend` directory based on `.env.example`:
 
-#### Required Environment Variables
+#### LLM Provider Configuration
 
-| Variable             | Required | Description                | Default                             |
-| -------------------- | -------- | -------------------------- | ----------------------------------- |
-| `WATSONX_API_KEY`    | Yes      | API Key for IBM watsonx    | -                                   |
-| `WATSONX_PROJECT_ID` | Yes      | Project ID for IBM watsonx | -                                   |
-| `WATSONX_URL`        | Yes      | IBM watsonx API endpoint   | `https://us-south.ml.cloud.ibm.com` |
+| Variable             | Required    | Description                                                     | Default                             |
+| -------------------- | ----------- | --------------------------------------------------------------- | ----------------------------------- |
+| `LLM_PROVIDER`       | No          | LLM provider to use                                             | `ollama`                            |
+| `LLM_MODEL`          | No          | LLM model name                                                  | `llama3.1`                          |
+| `WATSONX_API_KEY`    | Conditional | API Key for IBM watsonx (required if `LLM_PROVIDER=watsonx`)    | -                                   |
+| `WATSONX_PROJECT_ID` | Conditional | Project ID for IBM watsonx (required if `LLM_PROVIDER=watsonx`) | -                                   |
+| `WATSONX_URL`        | No          | IBM watsonx API endpoint                                        | `https://us-south.ml.cloud.ibm.com` |
+| `OPENAI_API_KEY`     | Conditional | API Key for OpenAI (required if `LLM_PROVIDER=openai`)          | -                                   |
 
-#### Optional Environment Variables
+#### Server Configuration
 
-| Variable            | Required | Description                                         | Default                 |
-| ------------------- | -------- | --------------------------------------------------- | ----------------------- |
-| `OPENAI_API_KEY`    | No       | API Key for OpenAI (alternative provider)           | -                       |
-| `ANTHROPIC_API_KEY` | No       | API Key for Anthropic Claude (alternative provider) | -                       |
-| `GOOGLE_API_KEY`    | No       | API Key for Google Gemini (alternative provider)    | -                       |
-| `HOST`              | No       | Server host address                                 | `0.0.0.0`               |
-| `PORT`              | No       | Server port number                                  | `8000`                  |
-| `DEBUG`             | No       | Debug mode                                          | `false`                 |
-| `CORS_ORIGINS`      | No       | Allowed CORS origins (comma-separated)              | `http://localhost:5173` |
-| `MAX_UPLOAD_SIZE`   | No       | Maximum file upload size (bytes)                    | `10485760` (10MB)       |
-| `RESEARCH_TIMEOUT`  | No       | Research operation timeout (seconds)                | `180`                   |
-| `LOG_LEVEL`         | No       | Logging level                                       | `INFO`                  |
+| Variable           | Required | Description                            | Default                 |
+| ------------------ | -------- | -------------------------------------- | ----------------------- |
+| `HOST`             | No       | Server host address                    | `0.0.0.0`               |
+| `PORT`             | No       | Server port number                     | `8000`                  |
+| `DEBUG`            | No       | Debug mode                             | `false`                 |
+| `CORS_ORIGINS`     | No       | Allowed CORS origins (comma-separated) | `http://localhost:5173` |
+| `MAX_UPLOAD_SIZE`  | No       | Maximum file upload size (bytes)       | `10485760` (10MB)       |
+| `RESEARCH_TIMEOUT` | No       | Research operation timeout (seconds)   | `180`                   |
+| `LOG_LEVEL`        | No       | Logging level                          | `INFO`                  |
 
 #### LLM Provider Setup
 
 This project uses the BeeAI Framework, which supports multiple LLM providers.
 
-##### Primary: IBM watsonx (Recommended)
+##### Option 1: Ollama (Default - Local)
+
+1. Install [Ollama](https://ollama.ai/)
+2. Pull a model: `ollama pull llama3.1`
+3. Start Ollama service (runs on `http://localhost:11434` by default)
+4. No `.env` configuration needed (uses defaults)
+
+##### Option 2: IBM watsonx
 
 1. Sign up at [IBM Cloud](https://cloud.ibm.com/)
 2. Create a watsonx.ai project
 3. Get your API key and Project ID from the credentials page
-4. Set `WATSONX_API_KEY`, `WATSONX_PROJECT_ID`, and `WATSONX_URL` in `.env`
+4. Configure in `.env`:
+   ```bash
+   LLM_PROVIDER=watsonx
+   LLM_MODEL=ibm/granite-13b-chat-v2
+   WATSONX_API_KEY=your-api-key-here
+   WATSONX_PROJECT_ID=your-project-id-here
+   WATSONX_URL=https://us-south.ml.cloud.ibm.com
+   ```
 
-##### Alternative Providers (Optional)
-
-**OpenAI:**
+##### Option 3: OpenAI
 
 1. Get API key from [OpenAI Platform](https://platform.openai.com/)
-2. Uncomment and set `OPENAI_API_KEY` in `.env`
+2. Configure in `.env`:
+   ```bash
+   LLM_PROVIDER=openai
+   LLM_MODEL=gpt-4
+   OPENAI_API_KEY=your-openai-api-key-here
+   ```
 
-**Anthropic Claude:**
+**Provider Selection:**
 
-1. Get API key from [Anthropic Console](https://console.anthropic.com/)
-2. Uncomment and set `ANTHROPIC_API_KEY` in `.env`
+The LLM provider is configured via environment variables:
 
-**Google Gemini:**
+- `LLM_PROVIDER`: Specify the provider to use (`ollama`, `watsonx`, or `openai`)
+- `LLM_MODEL`: Specify the model name (e.g., `llama3.1` for Ollama, `gpt-4` for OpenAI)
 
-1. Get API key from [Google AI Studio](https://makersuite.google.com/)
-2. Uncomment and set `GOOGLE_API_KEY` in `.env`
+**Default**: If not specified, defaults to `ollama` with `llama3.1` model.
 
-**Provider Selection Priority:**
-The system automatically selects the first available provider in this order:
+**Examples**:
 
-1. Claude (if `ANTHROPIC_API_KEY` is set)
-2. OpenAI (if `OPENAI_API_KEY` is set)
-3. Gemini (if `GOOGLE_API_KEY` is set)
-4. IBM watsonx (if `WATSONX_API_KEY` is set)
+```bash
+# Use Ollama (default)
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.1
+
+# Use IBM watsonx
+LLM_PROVIDER=watsonx
+LLM_MODEL=ibm/granite-13b-chat-v2
+
+# Use OpenAI
+LLM_PROVIDER=openai
+LLM_MODEL=gpt-4
+```
 
 ### Usage
 
@@ -167,7 +191,7 @@ This project uses a 3-stage quality assurance approach:
 Automatically runs on `git commit`:
 
 - Backend: Ruff linting and formatting
-- Frontend: Prettier formatting and ESLint
+- Frontend: Biome linting and formatting
 - General: Trailing whitespace, YAML/JSON validation
 
 Managed by `.pre-commit-config.yaml`.

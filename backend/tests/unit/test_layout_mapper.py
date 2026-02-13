@@ -313,14 +313,11 @@ def test_map_type_to_index_fallback_first(mapper, caplog):
     # Should fall back to type 2 (Title + Bullets)
     assert result == 1
 
-    # Verify warning was logged (check caplog for structured logging)
-    assert any(
-        "fallback" in record.message.lower() or "layout_type_fallback" in record.message.lower()
-        for record in caplog.records
-    )
+    # Verify warning was logged (use caplog to capture structured logs)
+    assert any("layout_type_fallback" in record.message.lower() for record in caplog.records)
     # Verify the log contains the expected type information
-    log_text = " ".join(str(record.message) for record in caplog.records).lower()
-    assert "4" in log_text and "2" in log_text
+    log_messages = " ".join(record.message.lower() for record in caplog.records)
+    assert "4" in log_messages and "2" in log_messages
 
 
 def test_map_type_to_index_fallback_second(mapper, caplog):
@@ -333,14 +330,11 @@ def test_map_type_to_index_fallback_second(mapper, caplog):
     # Should fall back to type 6 (Bullets Only)
     assert result == 5
 
-    # Verify warning was logged (check caplog for structured logging)
-    assert any(
-        "fallback" in record.message.lower() or "layout_type_fallback" in record.message.lower()
-        for record in caplog.records
-    )
+    # Verify warning was logged (use caplog to capture structured logs)
+    assert any("layout_type_fallback" in record.message.lower() for record in caplog.records)
     # Verify the log contains the expected type information
-    log_text = " ".join(str(record.message) for record in caplog.records).lower()
-    assert "4" in log_text and "6" in log_text
+    log_messages = " ".join(record.message.lower() for record in caplog.records)
+    assert "4" in log_messages and "6" in log_messages
 
 
 def test_map_type_to_index_fallback_exhausted_raises(mapper):
@@ -362,13 +356,8 @@ def test_map_type_to_index_logs_warning(mapper, caplog):
 
     mapper.map_type_to_index(4, mapping)
 
-    # Verify warning was logged (check caplog for structured logging)
-    assert any(
-        "fallback" in record.message.lower()
-        or "layout_type_fallback" in record.message.lower()
-        or "warning" in record.levelname.lower()
-        for record in caplog.records
-    )
+    # Verify warning was logged (use caplog to capture structured logs)
+    assert any("layout_type_fallback" in record.message.lower() or "fallback" in record.message.lower() for record in caplog.records)
 
 
 def test_fallback_priority_matrix_defined():

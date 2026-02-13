@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import type { SlideContent } from "../types";
-import { parseMarkdown } from "../api/pptxEnhancement";
+import { useEffect, useState } from 'react';
+import { parseMarkdown } from '../api/pptxEnhancement';
+import type { SlideContent } from '../types';
 
 interface MarkdownPreviewProps {
   markdownContent: string;
@@ -11,10 +11,7 @@ interface MarkdownPreviewProps {
  * Live preview component for Markdown content
  * Shows real-time slide structure as user types
  */
-export function MarkdownPreview({
-  markdownContent,
-  debounceMs = 500,
-}: MarkdownPreviewProps) {
+export function MarkdownPreview({ markdownContent, debounceMs = 500 }: MarkdownPreviewProps) {
   const [slides, setSlides] = useState<SlideContent[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +38,7 @@ export function MarkdownPreview({
         // Don't show errors in preview - just clear slides
         setSlides([]);
         setWarnings([]);
-        const errorMessage = err instanceof Error ? err.message : "Parse error";
+        const errorMessage = err instanceof Error ? err.message : 'Parse error';
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -53,7 +50,7 @@ export function MarkdownPreview({
 
   if (!markdownContent || !markdownContent.trim()) {
     return (
-      <div style={{ padding: "1rem", color: "#666", fontStyle: "italic" }}>
+      <div style={{ padding: '1rem', color: '#666', fontStyle: 'italic' }}>
         Start typing Markdown to see a live preview...
       </div>
     );
@@ -62,34 +59,30 @@ export function MarkdownPreview({
   return (
     <div
       style={{
-        padding: "1rem",
-        border: "1px solid #ddd",
-        borderRadius: "4px",
-        backgroundColor: "#f9f9f9",
+        padding: '1rem',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        backgroundColor: '#f9f9f9',
       }}
     >
       <h3
         style={{
           marginTop: 0,
-          marginBottom: "0.5rem",
-          fontSize: "1rem",
-          color: "#333",
+          marginBottom: '0.5rem',
+          fontSize: '1rem',
+          color: '#333',
         }}
       >
-        Preview{" "}
-        {loading && (
-          <span style={{ color: "#999", fontSize: "0.875rem" }}>
-            (updating...)
-          </span>
-        )}
+        Preview{' '}
+        {loading && <span style={{ color: '#999', fontSize: '0.875rem' }}>(updating...)</span>}
       </h3>
 
       {error && (
         <div
           style={{
-            color: "#999",
-            fontSize: "0.875rem",
-            marginBottom: "0.5rem",
+            color: '#999',
+            fontSize: '0.875rem',
+            marginBottom: '0.5rem',
           }}
         >
           Invalid Markdown - check syntax
@@ -97,24 +90,26 @@ export function MarkdownPreview({
       )}
 
       {warnings.length > 0 && (
-        <div style={{ marginBottom: "0.5rem" }}>
-          {warnings.map((warning, idx) => (
-            <div
-              key={idx}
-              style={{
-                color: "#f90",
-                fontSize: "0.875rem",
-                marginBottom: "0.25rem",
-              }}
-            >
-              ⚠️ {warning}
-            </div>
-          ))}
+        <div style={{ marginBottom: '0.5rem' }}>
+          {warnings.map((warning) => {
+            return (
+              <div
+                key={warning}
+                style={{
+                  color: '#f90',
+                  fontSize: '0.875rem',
+                  marginBottom: '0.25rem',
+                }}
+              >
+                ⚠️ {warning}
+              </div>
+            );
+          })}
         </div>
       )}
 
       {slides.length === 0 && !error && (
-        <div style={{ color: "#999", fontSize: "0.875rem" }}>
+        <div style={{ color: '#999', fontSize: '0.875rem' }}>
           No slides detected. Use ## for slide titles.
         </div>
       )}
@@ -123,61 +118,66 @@ export function MarkdownPreview({
         <div>
           <div
             style={{
-              fontSize: "0.875rem",
-              color: "#666",
-              marginBottom: "0.5rem",
+              fontSize: '0.875rem',
+              color: '#666',
+              marginBottom: '0.5rem',
             }}
           >
-            {slides.length} slide{slides.length !== 1 ? "s" : ""} detected
+            {slides.length} slide{slides.length !== 1 ? 's' : ''} detected
           </div>
-          {slides.map((slide, idx) => (
-            <div
-              key={idx}
-              style={{
-                marginBottom: "0.75rem",
-                padding: "0.75rem",
-                backgroundColor: "#fff",
-                border: "1px solid #e0e0e0",
-                borderRadius: "4px",
-              }}
-            >
+          {slides.map((slide, idx) => {
+            return (
               <div
+                key={`${slide.title}-${idx}`}
                 style={{
-                  fontWeight: "bold",
-                  marginBottom: "0.5rem",
-                  color: "#333",
+                  marginBottom: '0.75rem',
+                  padding: '0.75rem',
+                  backgroundColor: '#fff',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '4px',
                 }}
               >
-                Slide {idx + 1}: {slide.title}
-              </div>
-              {slide.bullet_points && slide.bullet_points.length > 0 && (
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: "1.5rem",
-                    fontSize: "0.875rem",
-                  }}
-                >
-                  {slide.bullet_points.map((bullet, bulletIdx) => (
-                    <li key={bulletIdx} style={{ marginBottom: "0.25rem" }}>
-                      {bullet}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {slide.image_url && (
                 <div
                   style={{
-                    marginTop: "0.5rem",
-                    fontSize: "0.875rem",
-                    color: "#666",
+                    fontWeight: 'bold',
+                    marginBottom: '0.5rem',
+                    color: '#333',
                   }}
                 >
-                  🖼️ Image: {slide.image_url}
+                  Slide {idx + 1}: {slide.title}
                 </div>
-              )}
-            </div>
-          ))}
+                {slide.bullet_points && slide.bullet_points.length > 0 && (
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: '1.5rem',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    {slide.bullet_points.map((bullet, bulletIdx) => {
+                      return (
+                        // biome-ignore lint/suspicious/noArrayIndexKey: List is static
+                        <li key={bulletIdx} style={{ marginBottom: '0.25rem' }}>
+                          {bullet}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {slide.image_url && (
+                  <div
+                    style={{
+                      marginTop: '0.5rem',
+                      fontSize: '0.875rem',
+                      color: '#666',
+                    }}
+                  >
+                    🖼️ Image: {slide.image_url}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

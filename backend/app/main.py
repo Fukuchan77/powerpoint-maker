@@ -47,11 +47,11 @@ app.add_middleware(
 )
 
 # Add security headers
-app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)  # type: ignore[arg-type]
 
 # Add rate limiting
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+app.state.limiter = limiter  # type: ignore[attr-defined]
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 
 @app.get("/")

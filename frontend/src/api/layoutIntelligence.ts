@@ -1,10 +1,10 @@
 /**
  * API client functions for Layout Intelligence features
  */
-import axios from "axios";
-import type { SlideContent } from "../types";
+import axios from 'axios';
+import type { SlideContent } from '../types';
 
-const API_BASE = "/api";
+const API_BASE = '/api';
 
 export interface LayoutIntelligenceRequest {
   text: string;
@@ -25,7 +25,7 @@ export interface LayoutIntelligenceResponse {
  */
 export async function generateFromText(
   text: string,
-  templateId?: string,
+  templateId?: string
 ): Promise<LayoutIntelligenceResponse> {
   const response = await axios.post<LayoutIntelligenceResponse>(
     `${API_BASE}/layout-intelligence`,
@@ -35,7 +35,7 @@ export async function generateFromText(
     },
     {
       timeout: 65000, // 65 seconds (slightly longer than backend 60s timeout)
-    },
+    }
   );
   return response.data;
 }

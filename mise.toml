@@ -13,8 +13,8 @@ node = "lts"
 
 # Frontend Tasks
 "frontend:dev" = { run = "pnpm dev", dir = "frontend", description = "Start frontend dev server" }
-"frontend:lint" = { run = "pnpm lint", dir = "frontend", description = "Lint frontend code" }
-"frontend:format" = { run = "pnpm prettier --write .", dir = "frontend", description = "Format frontend code" }
+"frontend:lint" = { run = "pnpm lint", dir = "frontend", description = "Lint frontend code (Biome)" }
+"frontend:format" = { run = "pnpm format", dir = "frontend", description = "Format frontend code (Biome)" }
 "frontend:build" = { run = "pnpm build", dir = "frontend", description = "Build frontend" }
 "frontend:test" = { run = "pnpm test", dir = "frontend", description = "Run frontend unit tests" }
 "frontend:test:e2e" = { run = "pnpm test:e2e", dir = "frontend", description = "Run frontend E2E tests" }

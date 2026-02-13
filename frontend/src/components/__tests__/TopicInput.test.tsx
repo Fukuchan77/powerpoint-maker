@@ -1,12 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import type { AxiosResponse } from "axios";
-import axios, { AxiosError } from "axios";
-import { describe, expect, it, vi } from "vitest";
-import { TopicInput } from "../TopicInput";
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { AxiosResponse } from 'axios';
+import axios, { AxiosError } from 'axios';
+import { describe, expect, it, vi } from 'vitest';
+import { TopicInput } from '../TopicInput';
 
-vi.mock("axios", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("axios")>();
+vi.mock('axios', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('axios')>();
   return {
     ...actual,
     default: {
@@ -18,98 +18,91 @@ vi.mock("axios", async (importOriginal) => {
 });
 
 // Helper function to create AxiosError with response
-function createAxiosError(
-  status: number,
-  data?: { detail?: string },
-): AxiosError {
+function createAxiosError(status: number, data?: { detail?: string }): AxiosError {
   const error = new AxiosError(`Request failed with status ${status}`);
   error.response = {
     status,
-    statusText: "Error",
+    statusText: 'Error',
     data: data || {},
     headers: {},
     config: { headers: {} },
-  } as AxiosError["response"];
+  } as AxiosError['response'];
   return error;
 }
 
-describe("TopicInput", () => {
+describe('TopicInput', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-  it("renders and updates input value", async () => {
+  it('renders and updates input value', async () => {
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    expect(input).toHaveValue("Test Topic");
+    expect(input).toHaveValue('Test Topic');
   });
 
-  it("calls API and returns content on button click", async () => {
+  it('calls API and returns content on button click', async () => {
     const handleGenerated = vi.fn();
-    const mockSlides = [
-      { title: "Slide 1", bullet_points: [], layout_index: 0 },
-    ];
+    const mockSlides = [{ title: 'Slide 1', bullet_points: [], layout_index: 0 }];
     // Add delay to check loading state
     vi.mocked(axios.post).mockImplementation(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve({ data: mockSlides }), 100),
-        ) as unknown as Promise<AxiosResponse>,
+          setTimeout(() => resolve({ data: mockSlides }), 100)
+        ) as unknown as Promise<AxiosResponse>
     );
 
     render(<TopicInput onContentGenerated={handleGenerated} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     expect(button).toBeDisabled();
-    expect(button).toHaveTextContent("Researching...");
+    expect(button).toHaveTextContent('Researching...');
 
     await waitFor(() => {
-      expect(axios.post).toHaveBeenCalledWith("/api/research", null, {
-        params: { topic: "Test Topic" },
+      expect(axios.post).toHaveBeenCalledWith('/api/research', null, {
+        params: { topic: 'Test Topic' },
         timeout: 180000,
       });
       expect(handleGenerated).toHaveBeenCalledWith(mockSlides);
     });
 
     expect(button).toBeEnabled();
-    expect(button).toHaveTextContent("Generate Content");
+    expect(button).toHaveTextContent('Generate Content');
   });
 
-  it("shows error on failure", async () => {
-    vi.mocked(axios.post).mockRejectedValueOnce(new Error("Failed"));
+  it('shows error on failure', async () => {
+    vi.mocked(axios.post).mockRejectedValueOnce(new Error('Failed'));
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
       // Updated to match the new English error message format
-      expect(
-        screen.getByText(/An unexpected error occurred/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/An unexpected error occurred/i)).toBeInTheDocument();
     });
   });
 
-  it("shows timeout error message for ECONNABORTED", async () => {
-    const axiosError = new AxiosError("timeout", "ECONNABORTED");
+  it('shows timeout error message for ECONNABORTED', async () => {
+    const axiosError = new AxiosError('timeout', 'ECONNABORTED');
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -117,16 +110,16 @@ describe("TopicInput", () => {
     });
   });
 
-  it("shows network error message for ERR_NETWORK", async () => {
-    const axiosError = new AxiosError("network error", "ERR_NETWORK");
+  it('shows network error message for ERR_NETWORK', async () => {
+    const axiosError = new AxiosError('network error', 'ERR_NETWORK');
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -134,16 +127,16 @@ describe("TopicInput", () => {
     });
   });
 
-  it("shows validation error for 400 status", async () => {
-    const axiosError = createAxiosError(400, { detail: "Invalid topic" });
+  it('shows validation error for 400 status', async () => {
+    const axiosError = createAxiosError(400, { detail: 'Invalid topic' });
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -151,16 +144,16 @@ describe("TopicInput", () => {
     });
   });
 
-  it("shows not found error for 404 status", async () => {
+  it('shows not found error for 404 status', async () => {
     const axiosError = createAxiosError(404);
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -168,16 +161,16 @@ describe("TopicInput", () => {
     });
   });
 
-  it("shows server error for 500 status", async () => {
-    const axiosError = createAxiosError(500, { detail: "Database error" });
+  it('shows server error for 500 status', async () => {
+    const axiosError = createAxiosError(500, { detail: 'Database error' });
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -185,35 +178,33 @@ describe("TopicInput", () => {
     });
   });
 
-  it("shows service unavailable for 503 status", async () => {
+  it('shows service unavailable for 503 status', async () => {
     const axiosError = createAxiosError(503);
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Service temporarily unavailable/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Service temporarily unavailable/i)).toBeInTheDocument();
     });
   });
 
-  it("shows generic error for other status codes", async () => {
-    const axiosError = createAxiosError(429, { detail: "Rate limited" });
+  it('shows generic error for other status codes', async () => {
+    const axiosError = createAxiosError(429, { detail: 'Rate limited' });
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -221,30 +212,28 @@ describe("TopicInput", () => {
     });
   });
 
-  it("shows connection failed error when axios error has no response", async () => {
-    const axiosError = new AxiosError("Connection refused");
+  it('shows connection failed error when axios error has no response', async () => {
+    const axiosError = new AxiosError('Connection refused');
     axiosError.response = undefined;
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Failed to generate content/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Failed to generate content/i)).toBeInTheDocument();
     });
   });
 
-  it("does not call API when topic is empty", async () => {
+  it('does not call API when topic is empty', async () => {
     render(<TopicInput onContentGenerated={() => {}} />);
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
 
     // Button should be disabled when topic is empty
     expect(button).toBeDisabled();
@@ -255,16 +244,16 @@ describe("TopicInput", () => {
     expect(axios.post).not.toHaveBeenCalled();
   });
 
-  it("shows validation error for 400 status without detail", async () => {
+  it('shows validation error for 400 status without detail', async () => {
     const axiosError = createAxiosError(400); // No detail field
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -274,16 +263,16 @@ describe("TopicInput", () => {
     });
   });
 
-  it("shows server error for 500 status without detail", async () => {
+  it('shows server error for 500 status without detail', async () => {
     const axiosError = createAxiosError(500); // No detail field
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -293,16 +282,16 @@ describe("TopicInput", () => {
     });
   });
 
-  it("shows generic error for unknown status without detail", async () => {
+  it('shows generic error for unknown status without detail', async () => {
     const axiosError = createAxiosError(418); // Teapot status, no detail
     vi.mocked(axios.post).mockRejectedValueOnce(axiosError);
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
@@ -311,49 +300,45 @@ describe("TopicInput", () => {
     });
   });
 
-  it("clears error when new research starts", async () => {
+  it('clears error when new research starts', async () => {
     // First request fails
-    vi.mocked(axios.post).mockRejectedValueOnce(new Error("First error"));
+    vi.mocked(axios.post).mockRejectedValueOnce(new Error('First error'));
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/An unexpected error occurred/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/An unexpected error occurred/i)).toBeInTheDocument();
     });
 
     // Second request succeeds
     vi.mocked(axios.post).mockResolvedValueOnce({
-      data: [{ title: "Success", bullet_points: [], layout_index: 0 }],
+      data: [{ title: 'Success', bullet_points: [], layout_index: 0 }],
     } as AxiosResponse);
 
     await userEvent.click(button);
 
     // Error should be cleared
     await waitFor(() => {
-      expect(
-        screen.queryByText(/An unexpected error occurred/i),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/An unexpected error occurred/i)).not.toBeInTheDocument();
     });
   });
 
-  it("handles non-Error object being thrown", async () => {
+  it('handles non-Error object being thrown', async () => {
     // Throw a string instead of Error object to test line 77 branch
-    vi.mocked(axios.post).mockRejectedValueOnce("String error");
+    vi.mocked(axios.post).mockRejectedValueOnce('String error');
 
     render(<TopicInput onContentGenerated={() => {}} />);
 
     const input = screen.getByPlaceholderText(/e.g., The Future of AI/i);
-    await userEvent.type(input, "Test Topic");
+    await userEvent.type(input, 'Test Topic');
 
-    const button = screen.getByRole("button", { name: /Generate Content/i });
+    const button = screen.getByRole('button', { name: /Generate Content/i });
     await userEvent.click(button);
 
     await waitFor(() => {

@@ -71,6 +71,10 @@ async def analyze_template(request: Request, file: UploadFile = File(...)):  # n
         # Validate file
         content = await validate_template_file(file)
 
+        # Validate filename is provided
+        if file.filename is None:
+            raise HTTPException(status_code=400, detail="Filename is required")
+
         # Sanitize filename
         safe_filename = get_safe_filename(file.filename)
 

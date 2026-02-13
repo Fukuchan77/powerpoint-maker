@@ -78,13 +78,8 @@ def test_suspicious_pattern_logs_warning_not_reject(input_validator, caplog):
     result = input_validator.validate(text)
     assert result == text
 
-    # Should log warning (check caplog for structured logging)
-    assert any(
-        "suspicious" in record.message.lower()
-        or "warning" in record.levelname.lower()
-        or "suspicious_pattern_detected" in record.message.lower()
-        for record in caplog.records
-    )
+    # Should log warning (use caplog to capture structured logs)
+    assert any("suspicious_pattern_detected" in record.message.lower() for record in caplog.records)
 
 
 def test_suspicious_pattern_multiple_matches(input_validator, caplog):
@@ -94,13 +89,8 @@ def test_suspicious_pattern_multiple_matches(input_validator, caplog):
     result = input_validator.validate(text)
     assert result == text
 
-    # Should log multiple pattern matches (check caplog for structured logging)
-    assert any(
-        "suspicious" in record.message.lower()
-        or "warning" in record.levelname.lower()
-        or "suspicious_pattern_detected" in record.message.lower()
-        for record in caplog.records
-    )
+    # Should log multiple pattern matches (use caplog to capture structured logs)
+    assert any("suspicious_pattern_detected" in record.message.lower() for record in caplog.records)
 
 
 def test_no_suspicious_patterns_no_warning(input_validator, capsys):

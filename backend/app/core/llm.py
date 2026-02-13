@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Any, TypeVar
 
@@ -54,8 +55,8 @@ def create_retry_decorator(
         stop=stop_after_attempt(max_attempts),
         wait=wait_exponential(multiplier=1, min=min_wait, max=max_wait),
         retry=retry_if_exception_type(exceptions),
-        before_sleep=before_sleep_log(logger, "WARNING"),
-        after=after_log(logger, "INFO"),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        after=after_log(logger, logging.INFO),
         reraise=True,
     )
 
@@ -126,7 +127,7 @@ async def call_llm_with_retry(llm: ChatModel, prompt: str, **kwargs: Any) -> str
     try:
         logger.debug("calling_llm", prompt_length=len(prompt))
 
-        response = await llm.ainvoke(prompt, **kwargs)
+        response = await llm.ainvoke(prompt, **kwargs)  # type: ignore[misc]
 
         logger.info("llm_call_success", response_length=len(response))
         return response

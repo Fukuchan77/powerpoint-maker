@@ -35,20 +35,20 @@ class Logger {
     // In production, always use JSON format
     const isDevelopment = import.meta.env.DEV;
 
-    if (isDevelopment && level !== "error") {
-      console.log(`[${this.serviceName}] ${message}`, context || "");
+    if (isDevelopment && level !== 'error') {
+      console.log(`[${this.serviceName}] ${message}`, context || '');
     } else {
-      const logMethod = level === "error" ? console.error : console.log;
+      const logMethod = level === 'error' ? console.error : console.log;
       logMethod(JSON.stringify(logEntry));
     }
   }
 
   info(message: string, context?: LogContext): void {
-    this.log("info", message, context);
+    this.log('info', message, context);
   }
 
   error(message: string, error?: Error, context?: LogContext): void {
-    this.log("error", message, {
+    this.log('error', message, {
       ...context,
       error: error?.message,
       error_type: error?.name,
@@ -57,11 +57,11 @@ class Logger {
   }
 
   warn(message: string, context?: LogContext): void {
-    this.log("warn", message, context);
+    this.log('warn', message, context);
   }
 
   debug(message: string, context?: LogContext): void {
-    this.log("debug", message, context);
+    this.log('debug', message, context);
   }
 }
 
@@ -70,5 +70,4 @@ class Logger {
  * @param serviceName - Name of the service or component
  * @returns Logger instance
  */
-export const createLogger = (serviceName: string): Logger =>
-  new Logger(serviceName);
+export const createLogger = (serviceName: string): Logger => new Logger(serviceName);

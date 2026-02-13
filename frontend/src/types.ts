@@ -64,12 +64,8 @@ export interface PresentationRequest {
 
 // === PPTX Enhancement Types ===
 
-export type AnalysisMode = "content" | "template";
-export type ContentSource =
-  | "web_search"
-  | "text_input"
-  | "markdown"
-  | "extracted";
+export type AnalysisMode = 'content' | 'template';
+export type ContentSource = 'web_search' | 'text_input' | 'markdown' | 'extracted';
 
 export interface ExtractedImage {
   id: string;
